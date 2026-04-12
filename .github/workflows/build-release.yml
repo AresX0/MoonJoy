@@ -26,16 +26,86 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install Pillow cx_Freeze
+          pip install Pillow pyinstaller
 
-      - name: Build MSI
-        run: python setup_cx.py bdist_msi --target-dir dist/windows
+      - name: Build with PyInstaller
+        run: |
+          python -m PyInstaller --name MoonJoy --onedir --windowed --noconfirm --clean --distpath dist/windows moonjoy/__main__.py
 
-      - name: Rename MSI
+      - name: Create MSI with WiX
         shell: pwsh
         run: |
-          $msi = Get-ChildItem dist/windows/*.msi | Select-Object -First 1
-          Copy-Item $msi.FullName "dist/windows/MoonJoy-1.0.0-win64.msi"
+          # Generate WiX source
+          $wxsContent = @"
+          <?xml version="1.0" encoding="UTF-8"?>
+          <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+            <Package Name="MoonJoy" Manufacturer="Platysoft" Version="1.0.0" UpgradeCode="7A3B62D0-9F1E-4C8A-B5D2-000000000001">
+              <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
+              <MediaTemplate EmbedCab="yes" />
+              <Feature Id="Main" Title="MoonJoy" Level="1">
+                <ComponentGroupRef Id="MoonJoyFiles" />
+                <ComponentRef Id="DesktopShortcut" />
+                <ComponentRef Id="StartMenuShortcut" />
+              </Feature>
+            </Package>
+
+            <Fragment>
+              <StandardDirectory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLFOLDER" Name="MoonJoy" />
+              </StandardDirectory>
+              <StandardDirectory Id="DesktopFolder" />
+              <StandardDirectory Id="ProgramMenuFolder" />
+            </Fragment>
+
+            <Fragment>
+              <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="7A3B62D0-9F1E-4C8A-B5D2-000000000002">
+                <Shortcut Id="DesktopLink" Name="MoonJoy" Target="[INSTALLFOLDER]MoonJoy.exe" WorkingDirectory="INSTALLFOLDER" />
+                <RegistryValue Root="HKCU" Key="Software\Platysoft\MoonJoy" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+              </Component>
+              <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder" Guid="7A3B62D0-9F1E-4C8A-B5D2-000000000003">
+                <Shortcut Id="StartMenuLink" Name="MoonJoy" Target="[INSTALLFOLDER]MoonJoy.exe" WorkingDirectory="INSTALLFOLDER" />
+                <RegistryValue Root="HKCU" Key="Software\Platysoft\MoonJoy" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+              </Component>
+            </Fragment>
+          </Wix>
+          "@
+          Set-Content -Path "dist/MoonJoy.wxs" -Value $wxsContent
+
+          # Install WiX
+          dotnet tool install --global wix --version 5.0.2
+
+          # Harvest files from PyInstaller output
+          wix extension add -g WixToolset.Util.wixext/5.0.2
+          wix extension add -g WixToolset.UI.wixext/5.0.2
+
+          # Use heat-like approach: create component group from directory
+          $files = Get-ChildItem -Recurse -File "dist/windows/MoonJoy"
+          $components = ""
+          $componentRefs = ""
+          $idx = 0
+          foreach ($f in $files) {
+            $relPath = $f.FullName.Replace("$PWD\dist\windows\MoonJoy\", "")
+            $id = "File_$idx"
+            $components += "    <Component Id=`"Comp_$idx`" Directory=`"INSTALLFOLDER`" Guid=`"*`">`n"
+            $components += "      <File Id=`"$id`" Source=`"dist\windows\MoonJoy\$relPath`" KeyPath=`"yes`" />`n"
+            $components += "    </Component>`n"
+            $componentRefs += "      <ComponentRef Id=`"Comp_$idx`" />`n"
+            $idx++
+          }
+
+          $filesWxs = @"
+          <?xml version="1.0" encoding="UTF-8"?>
+          <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+            <Fragment>
+              <ComponentGroup Id="MoonJoyFiles">
+          $componentRefs    </ComponentGroup>
+          $components  </Fragment>
+          </Wix>
+          "@
+          Set-Content -Path "dist/MoonJoyFiles.wxs" -Value $filesWxs
+
+          # Build MSI
+          wix build -o dist/windows/MoonJoy-1.0.0-win64.msi dist/MoonJoy.wxs dist/MoonJoyFiles.wxs
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4

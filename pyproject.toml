@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "NASA image screensaver and wallpaper rotator with live Artemis mission data"
 requires-python = ">=3.10"
 authors = [{name = "Platysoft", email = "info@platysoft.com"}]
-license = {text = "MIT"}
+license = "MIT"
 keywords = ["nasa", "screensaver", "wallpaper", "artemis", "space"]
 dependencies = [
     "Pillow>=10.0.0",
