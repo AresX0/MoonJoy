@@ -36,6 +36,8 @@ jobs:
             --windowed `
             --noconfirm `
             --clean `
+            --icon assets/icon.ico `
+            --add-data "assets;assets" `
             --collect-all PIL `
             --hidden-import moonjoy `
             --hidden-import moonjoy.screensaver `
@@ -80,13 +82,17 @@ jobs:
                 <File Id="MoonJoyExe" Source="dist\windows\MoonJoy.exe" KeyPath="yes" />
               </Component>
               <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="7A3B62D0-9F1E-4C8A-B5D2-000000000002">
-                <Shortcut Id="DesktopLink" Name="MoonJoy" Target="[INSTALLFOLDER]MoonJoy.exe" WorkingDirectory="INSTALLFOLDER" />
+                <Shortcut Id="DesktopLink" Name="MoonJoy" Target="[INSTALLFOLDER]MoonJoy.exe" WorkingDirectory="INSTALLFOLDER" Icon="MoonJoyIcon" />
                 <RegistryValue Root="HKCU" Key="Software\Platysoft\MoonJoy" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
               </Component>
               <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder" Guid="7A3B62D0-9F1E-4C8A-B5D2-000000000003">
-                <Shortcut Id="StartMenuLink" Name="MoonJoy" Target="[INSTALLFOLDER]MoonJoy.exe" WorkingDirectory="INSTALLFOLDER" />
+                <Shortcut Id="StartMenuLink" Name="MoonJoy" Target="[INSTALLFOLDER]MoonJoy.exe" WorkingDirectory="INSTALLFOLDER" Icon="MoonJoyIcon" />
                 <RegistryValue Root="HKCU" Key="Software\Platysoft\MoonJoy" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
               </Component>
+            </Fragment>
+
+            <Fragment>
+              <Icon Id="MoonJoyIcon" SourceFile="assets\icon.ico" />
             </Fragment>
           </Wix>
           "@
@@ -130,6 +136,8 @@ jobs:
             --windowed \
             --noconfirm \
             --clean \
+            --icon assets/icon.icns \
+            --add-data "assets:assets" \
             --collect-all PIL \
             --hidden-import moonjoy \
             --hidden-import moonjoy.screensaver \
@@ -154,6 +162,9 @@ jobs:
           cp dist/macos/MoonJoy "$APP_BUNDLE/Contents/MacOS/MoonJoy"
           chmod +x "$APP_BUNDLE/Contents/MacOS/MoonJoy"
 
+          # Convert icon.icns for the .app bundle
+          cp assets/icon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+
           cat > "$APP_BUNDLE/Contents/Info.plist" << 'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -167,6 +178,7 @@ jobs:
               <key>CFBundleShortVersionString</key><string>1.0.0</string>
               <key>CFBundleExecutable</key><string>MoonJoy</string>
               <key>CFBundlePackageType</key><string>APPL</string>
+              <key>CFBundleIconFile</key><string>AppIcon</string>
               <key>LSMinimumSystemVersion</key><string>11.0</string>
               <key>NSHighResolutionCapable</key><true/>
           </dict>
@@ -209,6 +221,7 @@ jobs:
             --windowed \
             --noconfirm \
             --clean \
+            --add-data "assets:assets" \
             --collect-all PIL \
             --hidden-import moonjoy \
             --hidden-import moonjoy.screensaver \
@@ -232,6 +245,10 @@ jobs:
           # Copy single self-contained binary
           cp dist/linux/MoonJoy "$PKG_DIR/opt/moonjoy/MoonJoy"
           chmod +x "$PKG_DIR/opt/moonjoy/MoonJoy"
+
+          # Install icon
+          mkdir -p "$PKG_DIR/usr/share/icons/hicolor/256x256/apps"
+          cp assets/logo.png "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/moonjoy.png"
 
           cat > "$PKG_DIR/DEBIAN/control" << 'CTRL'
           Package: moonjoy
@@ -269,6 +286,7 @@ jobs:
           Name=MoonJoy
           Comment=NASA Image Screensaver & Wallpaper Rotator by Platysoft
           Exec=/opt/moonjoy/MoonJoy gui
+          Icon=moonjoy
           Type=Application
           Categories=Utility;Graphics;
           Terminal=false

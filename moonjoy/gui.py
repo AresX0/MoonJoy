@@ -1,10 +1,18 @@
 """MoonJoy Settings GUI - configure screensaver and wallpaper rotator."""
 
+import os
 import sys
 import tkinter as tk
 from tkinter import ttk
 
 from .config import load_config, save_config
+
+
+def _asset_path(filename: str) -> str:
+    """Return the path to a bundled asset file."""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, "assets", filename)
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", filename)
 
 
 class SettingsApp:
@@ -39,14 +47,28 @@ class SettingsApp:
         main = ttk.Frame(root, style="Dark.TFrame", padding=20)
         main.pack(fill="both", expand=True)
 
-        # Title
-        ttk.Label(main, text="🌙 MoonJoy", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(main, text="NASA Image Screensaver & Wallpaper Rotator",
+        # Logo + Title row
+        header = ttk.Frame(main, style="Dark.TFrame")
+        header.pack(anchor="w", pady=(0, 5))
+
+        logo_path = _asset_path("logo.png")
+        self._logo_image = None
+        if os.path.isfile(logo_path):
+            try:
+                self._logo_image = tk.PhotoImage(file=logo_path).subsample(4)
+                tk.Label(header, image=self._logo_image, bg=self.bg).pack(side="left", padx=(0, 10))
+            except Exception:
+                pass
+
+        title_col = ttk.Frame(header, style="Dark.TFrame")
+        title_col.pack(side="left")
+        ttk.Label(title_col, text="MoonJoy", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(title_col, text="NASA Image Screensaver & Wallpaper Rotator",
                   style="Dark.TLabel").pack(anchor="w")
-        link_label = tk.Label(main, text="by Platysoft — platysoft.com",
+        link_label = tk.Label(title_col, text="by Platysoft — platysoft.com",
                               bg=self.bg, fg="#7986cb", font=("Segoe UI", 9),
                               cursor="hand2")
-        link_label.pack(anchor="w", pady=(0, 15))
+        link_label.pack(anchor="w")
         link_label.bind("<Button-1>", lambda e: __import__('webbrowser').open("https://platysoft.com/"))
 
         # ── Screensaver section ──────────────────────────────────────────
@@ -168,7 +190,16 @@ class SettingsApp:
 def run_gui():
     """Entry point for the settings GUI."""
     root = tk.Tk()
-    root.geometry("520x520")
+    root.geometry("520x560")
+    icon_path = _asset_path("icon.ico" if sys.platform == "win32" else "logo.png")
+    if os.path.isfile(icon_path):
+        try:
+            if sys.platform == "win32":
+                root.iconbitmap(icon_path)
+            else:
+                root.iconphoto(True, tk.PhotoImage(file=icon_path))
+        except Exception:
+            pass
     SettingsApp(root)
     root.mainloop()
 
