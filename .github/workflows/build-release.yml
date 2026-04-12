@@ -1,0 +1,254 @@
+name: Build & Release MoonJoy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # Windows MSI
+  # ═══════════════════════════════════════════════════════════════
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install Pillow cx_Freeze
+
+      - name: Build MSI
+        run: python setup_cx.py bdist_msi --target-dir dist/windows
+
+      - name: Rename MSI
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem dist/windows/*.msi | Select-Object -First 1
+          Copy-Item $msi.FullName "dist/windows/MoonJoy-1.0.0-win64.msi"
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi
+          path: dist/windows/MoonJoy-1.0.0-win64.msi
+
+  # ═══════════════════════════════════════════════════════════════
+  # macOS DMG
+  # ═══════════════════════════════════════════════════════════════
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install Pillow pyinstaller
+
+      - name: Build app
+        run: |
+          python -m PyInstaller \
+            --name MoonJoy \
+            --onedir \
+            --windowed \
+            --noconfirm \
+            --clean \
+            --osx-bundle-identifier com.platysoft.moonjoy \
+            --distpath dist/macos \
+            moonjoy/__main__.py
+
+      - name: Create DMG
+        run: |
+          mkdir -p dist/dmg_staging
+          if [ -d "dist/macos/MoonJoy.app" ]; then
+            cp -r "dist/macos/MoonJoy.app" dist/dmg_staging/
+          else
+            APP_BUNDLE="dist/dmg_staging/MoonJoy.app"
+            mkdir -p "$APP_BUNDLE/Contents/MacOS"
+            mkdir -p "$APP_BUNDLE/Contents/Resources"
+            cp -r dist/macos/MoonJoy/* "$APP_BUNDLE/Contents/MacOS/"
+            cat > "$APP_BUNDLE/Contents/Info.plist" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key><string>MoonJoy</string>
+              <key>CFBundleDisplayName</key><string>MoonJoy</string>
+              <key>CFBundleIdentifier</key><string>com.platysoft.moonjoy</string>
+              <key>CFBundleVersion</key><string>1.0.0</string>
+              <key>CFBundleShortVersionString</key><string>1.0.0</string>
+              <key>CFBundleExecutable</key><string>MoonJoy</string>
+              <key>CFBundlePackageType</key><string>APPL</string>
+              <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          EOF
+          fi
+          ln -sf /Applications dist/dmg_staging/Applications
+          hdiutil create -volname "MoonJoy" -srcfolder dist/dmg_staging -ov -format UDZO "dist/MoonJoy-1.0.0-macOS.dmg"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/MoonJoy-1.0.0-macOS.dmg
+
+  # ═══════════════════════════════════════════════════════════════
+  # Linux .deb
+  # ═══════════════════════════════════════════════════════════════
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install Pillow pyinstaller
+          sudo apt-get update && sudo apt-get install -y python3-tk
+
+      - name: Build binary
+        run: |
+          python -m PyInstaller \
+            --name MoonJoy \
+            --onedir \
+            --windowed \
+            --noconfirm \
+            --clean \
+            --distpath dist/linux \
+            moonjoy/__main__.py
+
+      - name: Create .deb package
+        run: |
+          PKG_DIR="dist/moonjoy_1.0.0_amd64"
+          mkdir -p "$PKG_DIR/DEBIAN"
+          mkdir -p "$PKG_DIR/opt/moonjoy"
+          mkdir -p "$PKG_DIR/usr/share/applications"
+          mkdir -p "$PKG_DIR/usr/bin"
+
+          cp -r dist/linux/MoonJoy/* "$PKG_DIR/opt/moonjoy/"
+
+          cat > "$PKG_DIR/DEBIAN/control" << EOF
+          Package: moonjoy
+          Version: 1.0.0
+          Section: graphics
+          Priority: optional
+          Architecture: amd64
+          Depends: python3, python3-tk
+          Maintainer: Platysoft <info@platysoft.com>
+          Homepage: https://platysoft.com/
+          Description: NASA Image Screensaver & Wallpaper Rotator
+           MoonJoy is a cross-platform screensaver and wallpaper rotator featuring
+           NASA imagery with live Artemis mission data overlay.
+           Developed by Platysoft — https://platysoft.com/
+          EOF
+
+          cat > "$PKG_DIR/DEBIAN/postinst" << 'EOF'
+          #!/bin/bash
+          chmod +x /opt/moonjoy/MoonJoy
+          ln -sf /opt/moonjoy/MoonJoy /usr/bin/moonjoy
+          EOF
+          chmod 755 "$PKG_DIR/DEBIAN/postinst"
+
+          cat > "$PKG_DIR/DEBIAN/prerm" << 'EOF'
+          #!/bin/bash
+          rm -f /usr/bin/moonjoy
+          EOF
+          chmod 755 "$PKG_DIR/DEBIAN/prerm"
+
+          cat > "$PKG_DIR/usr/share/applications/moonjoy.desktop" << EOF
+          [Desktop Entry]
+          Name=MoonJoy
+          Comment=NASA Image Screensaver & Wallpaper Rotator by Platysoft
+          Exec=/opt/moonjoy/MoonJoy gui
+          Type=Application
+          Categories=Utility;Graphics;
+          Terminal=false
+          EOF
+
+          dpkg-deb --build --root-owner-group "$PKG_DIR"
+          mv dist/moonjoy_1.0.0_amd64.deb dist/MoonJoy-1.0.0-linux-amd64.deb
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: dist/MoonJoy-1.0.0-linux-amd64.deb
+
+  # ═══════════════════════════════════════════════════════════════
+  # Create GitHub Release
+  # ═══════════════════════════════════════════════════════════════
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "MoonJoy ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          body: |
+            ## MoonJoy ${{ github.ref_name }} — NASA Image Screensaver & Wallpaper Rotator
+
+            Developed by [Platysoft](https://platysoft.com/)
+
+            ### Downloads
+
+            | Platform | File | Install |
+            |----------|------|---------|
+            | **Windows** | `MoonJoy-1.0.0-win64.msi` | Double-click MSI to install |
+            | **macOS** | `MoonJoy-1.0.0-macOS.dmg` | Open DMG, drag to Applications |
+            | **Linux** | `MoonJoy-1.0.0-linux-amd64.deb` | `sudo dpkg -i MoonJoy-*.deb` |
+
+            ### Features
+            - 🖼️ Fullscreen screensaver slideshow of NASA imagery
+            - 🌙 Live NASA Artemis mission data overlay (Artemis I–V)
+            - 🚀 20+ upcoming NASA launch dates
+            - 🖥️ Desktop wallpaper rotator with configurable interval
+            - ⚙️ Settings GUI to configure intervals, shuffle, fit mode
+            - 🪟 Windows screensaver (.scr) support
+            - 🐧 Linux systemd service for auto-start wallpaper rotation
+            - 🍎 macOS launchd integration
+
+            ### Quick Start
+            1. Install using the appropriate package for your OS
+            2. Place your NASA images in an `Images/` folder next to the app
+            3. Run `MoonJoy` to open settings, or `MoonJoy screensaver` for immediate slideshow
+
+            ---
+            *[platysoft.com](https://platysoft.com/)*
+          files: |
+            artifacts/windows-msi/MoonJoy-1.0.0-win64.msi
+            artifacts/macos-dmg/MoonJoy-1.0.0-macOS.dmg
+            artifacts/linux-deb/MoonJoy-1.0.0-linux-amd64.deb

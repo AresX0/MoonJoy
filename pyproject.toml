@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "moonjoy"
+version = "1.0.0"
+description = "NASA image screensaver and wallpaper rotator with live Artemis mission data"
+requires-python = ">=3.10"
+authors = [{name = "Platysoft", email = "info@platysoft.com"}]
+license = {text = "MIT"}
+keywords = ["nasa", "screensaver", "wallpaper", "artemis", "space"]
+dependencies = [
+    "Pillow>=10.0.0",
+]
+
+[project.urls]
+Homepage = "https://platysoft.com/"
+Repository = "https://github.com/platysoft/MoonJoy"
+
+[project.scripts]
+moonjoy = "moonjoy.__main__:main"
+
+[project.gui-scripts]
+moonjoy-gui = "moonjoy.gui:run_gui"
+
+[tool.setuptools.packages.find]
+include = ["moonjoy*"]

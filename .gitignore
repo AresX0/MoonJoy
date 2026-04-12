@@ -1,0 +1,42 @@
+# MoonJoy - NASA Screensaver & Wallpaper Rotator
+
+# ── Images (large, not tracked in git) ──
+Images/
+images/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.spec
+
+# ── Build artifacts ──
+*.msi
+*.dmg
+*.deb
+*.AppImage
+*.exe
+*.scr
+installer_output/
+
+# ── IDE / OS ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Virtual environments ──
+venv/
+.venv/
+env/
+
+# ── Config cache ──
+moonjoy_config.json
