@@ -7,20 +7,20 @@ def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "gui"
 
     if mode in ("screensaver", "/s", "/S"):
-        from .screensaver import run_screensaver
+        from moonjoy.screensaver import run_screensaver
         run_screensaver()
     elif mode in ("wallpaper", "wp"):
-        from .wallpaper_daemon import run_wallpaper_daemon
+        from moonjoy.wallpaper_daemon import run_wallpaper_daemon
         run_wallpaper_daemon()
     elif mode in ("configure", "config", "/c", "/C"):
-        from .gui import run_gui
+        from moonjoy.gui import run_gui
         run_gui()
     elif mode in ("gui", "settings"):
-        from .gui import run_gui
+        from moonjoy.gui import run_gui
         run_gui()
     elif mode in ("preview", "/p", "/P"):
         # Windows screensaver preview mode — just launch the screensaver
-        from .screensaver import run_screensaver
+        from moonjoy.screensaver import run_screensaver
         run_screensaver()
     else:
         print("MoonJoy — NASA Image Screensaver & Wallpaper Rotator")

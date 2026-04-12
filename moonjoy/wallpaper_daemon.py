@@ -4,9 +4,9 @@ import signal
 import sys
 import time
 
-from .config import load_config
-from .image_scanner import scan_images
-from .wallpaper import set_wallpaper
+from moonjoy.config import load_config
+from moonjoy.image_scanner import scan_images
+from moonjoy.wallpaper import set_wallpaper
 
 
 def run_wallpaper_daemon():

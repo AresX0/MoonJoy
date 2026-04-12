@@ -9,9 +9,9 @@ from itertools import cycle
 
 from PIL import Image, ImageTk
 
-from .config import load_config
-from .image_scanner import scan_images
-from .nasa_data import get_overlay_lines
+from moonjoy.config import load_config
+from moonjoy.image_scanner import scan_images
+from moonjoy.nasa_data import get_overlay_lines
 
 
 class ScreensaverWindow:
