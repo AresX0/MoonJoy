@@ -2,22 +2,40 @@
 
 import os
 import random
+import sys
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tif", ".tiff"}
 
 
 def get_images_dir() -> str:
-    """Return the path to the Images directory next to this package."""
+    """Return the path to the Images directory.
+
+    Search order:
+    1. Next to the running executable (frozen builds)
+    2. Next to this package (development)
+    3. Current working directory
+    """
+    candidates = []
+
+    # Frozen exe: look next to the exe itself (e.g. C:\Program Files\Platysoft\MoonJoy\Images)
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(sys.executable)
+        candidates.append(os.path.join(exe_dir, "Images"))
+
+    # Development: next to the package
     package_dir = os.path.dirname(os.path.abspath(__file__))
     project_dir = os.path.dirname(package_dir)
-    images_dir = os.path.join(project_dir, "Images")
-    if not os.path.isdir(images_dir):
-        # When running from a frozen PyInstaller bundle
-        if hasattr(os.sys, "_MEIPASS"):
-            images_dir = os.path.join(os.sys._MEIPASS, "Images")
-        if not os.path.isdir(images_dir):
-            images_dir = os.path.join(os.getcwd(), "Images")
-    return images_dir
+    candidates.append(os.path.join(project_dir, "Images"))
+
+    # Fallback: current working directory
+    candidates.append(os.path.join(os.getcwd(), "Images"))
+
+    for path in candidates:
+        if os.path.isdir(path):
+            return path
+
+    # Return the first candidate even if it doesn't exist yet
+    return candidates[0]
 
 
 def scan_images(images_dir: str | None = None, shuffle: bool = True) -> list[str]:

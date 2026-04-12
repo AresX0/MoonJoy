@@ -59,7 +59,7 @@ jobs:
           <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
             <Package Name="MoonJoy" Manufacturer="Platysoft" Version="1.0.0"
                      UpgradeCode="7A3B62D0-9F1E-4C8A-B5D2-000000000001"
-                     InstallerVersion="500" Scope="perUser">
+                     InstallerVersion="500" Scope="perMachine">
               <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
               <MediaTemplate EmbedCab="yes" />
               <Feature Id="Main" Title="MoonJoy" Level="1">
@@ -70,8 +70,10 @@ jobs:
             </Package>
 
             <Fragment>
-              <StandardDirectory Id="LocalAppDataFolder">
-                <Directory Id="INSTALLFOLDER" Name="MoonJoy" />
+              <StandardDirectory Id="ProgramFiles64Folder">
+                <Directory Id="PlatysoftFolder" Name="Platysoft">
+                  <Directory Id="INSTALLFOLDER" Name="MoonJoy" />
+                </Directory>
               </StandardDirectory>
               <StandardDirectory Id="DesktopFolder" />
               <StandardDirectory Id="ProgramMenuFolder" />
