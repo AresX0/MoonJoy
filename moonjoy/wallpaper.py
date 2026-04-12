@@ -1,4 +1,4 @@
-"""Cross-platform desktop wallpaper setter."""
+"""Cross-platform desktop wallpaper setter with optional NASA overlay."""
 
 import ctypes
 import os
@@ -8,7 +8,101 @@ import subprocess
 import sys
 import tempfile
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
+
+
+def _get_font(size: int, bold: bool = False):
+    """Try to load a good monospace font, fall back to default."""
+    font_names = [
+        "consola.ttf", "consolab.ttf" if bold else "consola.ttf",
+        "DejaVuSansMono.ttf", "LiberationMono-Regular.ttf",
+    ]
+    for name in font_names:
+        try:
+            return ImageFont.truetype(name, size)
+        except (OSError, IOError):
+            pass
+    # System font paths
+    if sys.platform == "win32":
+        font_dir = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts")
+        for name in ["consola.ttf", "cour.ttf", "arial.ttf"]:
+            path = os.path.join(font_dir, name)
+            if os.path.isfile(path):
+                try:
+                    return ImageFont.truetype(path, size)
+                except (OSError, IOError):
+                    pass
+    return ImageFont.load_default()
+
+
+def burn_overlay(img: Image.Image, lines: list[str], opacity: float = 0.85) -> Image.Image:
+    """Burn NASA text overlay onto the top-right corner of an image."""
+    if not lines:
+        return img
+
+    img = img.convert("RGBA")
+    w, h = img.size
+
+    font = _get_font(max(11, h // 70))
+    title_font = _get_font(max(13, h // 60), bold=True)
+
+    # Measure text
+    dummy = ImageDraw.Draw(img)
+    padding = 16
+    line_height = max(18, h // 50)
+    max_text_w = 0
+    for line in lines:
+        f = title_font if line.startswith("═") else font
+        bbox = dummy.textbbox((0, 0), line, font=f)
+        max_text_w = max(max_text_w, bbox[2] - bbox[0])
+
+    box_w = max_text_w + padding * 2
+    box_h = len(lines) * line_height + padding * 2
+    x_right = w - 20
+    y_top = 20
+
+    # Create overlay layer
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Semi-transparent background
+    alpha = int(255 * opacity)
+    draw.rectangle(
+        [x_right - box_w, y_top, x_right, y_top + box_h],
+        fill=(10, 10, 30, alpha),
+        outline=(80, 120, 200, alpha),
+        width=1,
+    )
+
+    # Draw text lines
+    y = y_top + padding
+    for line in lines:
+        if line.startswith("═"):
+            color = (79, 195, 247, 255)   # cyan titles
+            f = title_font
+        elif line.startswith("✓"):
+            color = (102, 187, 106, 255)  # green completed
+            f = font
+        elif line.startswith("●"):
+            color = (255, 167, 38, 255)   # orange active
+            f = font
+        elif line.startswith("◇"):
+            color = (100, 181, 246, 255)  # blue upcoming
+            f = font
+        elif line.startswith("▸"):
+            color = (186, 104, 200, 255)  # purple launches
+            f = font
+        elif "platysoft" in line.lower():
+            color = (121, 134, 203, 255)  # indigo
+            f = font
+        else:
+            color = (224, 224, 224, 255)  # white-ish
+            f = font
+
+        draw.text((x_right - box_w + padding, y), line, fill=color, font=f)
+        y += line_height
+
+    return Image.alpha_composite(img, overlay).convert("RGB")
 
 
 def _prepare_image(image_path: str, fit_mode: str = "fit") -> str:
@@ -72,7 +166,10 @@ def _fill(img: Image.Image, sw: int, sh: int) -> Image.Image:
     return img.crop((left, top, left + sw, top + sh))
 
 
-def set_wallpaper(image_path: str, fit_mode: str = "fit") -> bool:
+def set_wallpaper(image_path: str, fit_mode: str = "fit",
+                  overlay_lines: list[str] | None = None,
+                  overlay_opacity: float = 0.85,
+                  set_lockscreen: bool = False) -> bool:
     """Set the desktop wallpaper. Returns True on success."""
     try:
         prepared = _prepare_image(image_path, fit_mode)
@@ -80,15 +177,30 @@ def set_wallpaper(image_path: str, fit_mode: str = "fit") -> bool:
         print(f"Failed to prepare image: {e}")
         return False
 
+    # Burn overlay onto the prepared wallpaper image if requested
+    if overlay_lines:
+        try:
+            img = Image.open(prepared)
+            img = burn_overlay(img, overlay_lines, overlay_opacity)
+            img.save(prepared)
+        except Exception as e:
+            print(f"Failed to burn overlay: {e}")
+
     system = platform.system()
 
     try:
         if system == "Windows":
-            return _set_wallpaper_windows(prepared)
+            ok = _set_wallpaper_windows(prepared)
+            if ok and set_lockscreen:
+                _set_lockscreen_windows(prepared)
+            return ok
         elif system == "Darwin":
             return _set_wallpaper_macos(prepared)
         elif system == "Linux":
-            return _set_wallpaper_linux(prepared)
+            ok = _set_wallpaper_linux(prepared)
+            if ok and set_lockscreen:
+                _set_lockscreen_linux(prepared)
+            return ok
         else:
             print(f"Unsupported platform: {system}")
             return False
@@ -203,3 +315,41 @@ for (var i = 0; i < allDesktops.length; i++) {{
 
     print("Could not detect desktop environment for wallpaper setting")
     return False
+
+
+def _set_lockscreen_windows(path: str) -> bool:
+    """Set Windows lock screen image via registry."""
+    try:
+        import winreg
+        # Copy image to a stable location
+        lock_dir = os.path.join(tempfile.gettempdir(), "moonjoy_wallpaper")
+        lock_path = os.path.join(lock_dir, "lockscreen.jpg")
+        img = Image.open(path)
+        img.save(lock_path, "JPEG", quality=95)
+
+        # Enable custom lock screen and set image path via registry
+        key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+        with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+            winreg.SetValueEx(key, "LockScreenImageStatus", 0, winreg.REG_DWORD, 1)
+            winreg.SetValueEx(key, "LockScreenImagePath", 0, winreg.REG_SZ, lock_path)
+            winreg.SetValueEx(key, "LockScreenImageUrl", 0, winreg.REG_SZ, lock_path)
+        return True
+    except PermissionError:
+        print("  Lock screen: requires admin privileges (skipped)")
+        return False
+    except Exception as e:
+        print(f"  Lock screen failed: {e}")
+        return False
+
+
+def _set_lockscreen_linux(path: str) -> bool:
+    """Set GNOME lock screen background."""
+    try:
+        result = subprocess.run(
+            ["gsettings", "set", "org.gnome.desktop.screensaver", "picture-uri",
+             f"file://{path}"],
+            capture_output=True, timeout=10
+        )
+        return result.returncode == 0
+    except Exception:
+        return False

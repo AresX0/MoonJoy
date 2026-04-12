@@ -12,7 +12,9 @@ DEFAULTS = {
     "transition": "fade",           # fade or cut
     "shuffle": True,
     "fit_mode": "fit",              # fit, fill, stretch, center
-    "show_overlay": True,           # show NASA mission info overlay
+    "show_overlay": True,           # show NASA mission info overlay on screensaver
+    "wallpaper_overlay": True,      # burn NASA overlay onto desktop wallpaper
+    "apply_to_lockscreen": True,    # also set as Windows lock screen
     "overlay_opacity": 0.85,        # overlay background opacity
     "overlay_scroll_speed": 30,     # seconds per full scroll cycle
     "images_dir": "",               # custom images directory (empty = auto-detect)

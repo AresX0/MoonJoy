@@ -22,11 +22,25 @@ def run_wallpaper_daemon():
 
     interval = config.get("wallpaper_interval", 300)
     fit_mode = config.get("fit_mode", "fit")
+    wallpaper_overlay = config.get("wallpaper_overlay", True)
+    overlay_opacity = config.get("overlay_opacity", 0.85)
+    set_lockscreen = config.get("apply_to_lockscreen", True)
+
+    # Pre-fetch overlay lines if overlay is enabled
+    overlay_lines = None
+    if wallpaper_overlay:
+        try:
+            from moonjoy.nasa_data import get_overlay_lines
+            overlay_lines = get_overlay_lines(max_lines=12)
+        except Exception:
+            overlay_lines = None
 
     print(f"MoonJoy Wallpaper Rotator")
     print(f"  Found {len(images)} images")
     print(f"  Changing every {interval} seconds")
     print(f"  Fit mode: {fit_mode}")
+    print(f"  NASA overlay: {'on' if overlay_lines else 'off'}")
+    print(f"  Lock screen: {'on' if set_lockscreen else 'off'}")
     print(f"  Press Ctrl+C to stop\n")
 
     # Graceful shutdown
@@ -42,7 +56,10 @@ def run_wallpaper_daemon():
     idx = 0
     while running:
         path = images[idx % len(images)]
-        success = set_wallpaper(path, fit_mode)
+        success = set_wallpaper(path, fit_mode,
+                                overlay_lines=overlay_lines,
+                                overlay_opacity=overlay_opacity,
+                                set_lockscreen=set_lockscreen)
         if success:
             print(f"  Wallpaper: {path}")
         else:

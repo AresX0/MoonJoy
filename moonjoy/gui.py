@@ -135,6 +135,16 @@ class SettingsApp:
                                  state="readonly", width=10, style="Dark.TCombobox")
         fit_combo.pack(side="right")
 
+        self.wp_overlay_var = tk.BooleanVar(value=self.config.get("wallpaper_overlay", True))
+        ttk.Checkbutton(main, text="Show NASA overlay on desktop wallpaper",
+                        variable=self.wp_overlay_var,
+                        style="Dark.TCheckbutton").pack(anchor="w", pady=2)
+
+        self.lockscreen_var = tk.BooleanVar(value=self.config.get("apply_to_lockscreen", True))
+        ttk.Checkbutton(main, text="Apply to lock screen (Windows)",
+                        variable=self.lockscreen_var,
+                        style="Dark.TCheckbutton").pack(anchor="w", pady=2)
+
         # ── Buttons ──────────────────────────────────────────────────────
         sep = ttk.Frame(main, style="Dark.TFrame", height=2)
         sep.pack(fill="x", pady=15)
@@ -156,6 +166,15 @@ class SettingsApp:
                              bg=self.btn_bg, fg=self.fg, activebackground="#1a3a6a",
                              relief="flat", font=("Segoe UI", 10), padx=12, pady=6)
         save_btn.pack(side="right")
+
+        # Second button row for update
+        btn_row2 = ttk.Frame(main, style="Dark.TFrame")
+        btn_row2.pack(fill="x", pady=(5, 0))
+
+        update_btn = tk.Button(btn_row2, text="⬆ Check for Updates", command=self._check_update,
+                               bg="#6a1b9a", fg="white", activebackground="#7b1fa2",
+                               relief="flat", font=("Segoe UI", 10), padx=12, pady=6)
+        update_btn.pack(side="left")
 
         # Status bar
         self.status_var = tk.StringVar(value="")
@@ -188,6 +207,8 @@ class SettingsApp:
 
         self.config["shuffle"] = self.shuffle_var.get()
         self.config["show_overlay"] = self.overlay_var.get()
+        self.config["wallpaper_overlay"] = self.wp_overlay_var.get()
+        self.config["apply_to_lockscreen"] = self.lockscreen_var.get()
         self.config["fit_mode"] = self.fit_var.get()
 
         save_config(self.config)
@@ -214,11 +235,69 @@ class SettingsApp:
             subprocess.Popen([sys.executable, "-m", "moonjoy", "wallpaper"])
         self.status_var.set("Wallpaper rotator started!")
 
+    def _check_update(self):
+        """Check GitHub for a newer release and offer to download it."""
+        import threading
+        self.status_var.set("Checking for updates…")
+        threading.Thread(target=self._do_update_check, daemon=True).start()
+
+    def _do_update_check(self):
+        """Background thread: fetch latest release info from GitHub."""
+        import json
+        from urllib.request import urlopen, Request
+        from urllib.error import URLError
+
+        from moonjoy import __version__
+
+        api_url = "https://api.github.com/repos/AresX0/MoonJoy/releases/latest"
+        try:
+            req = Request(api_url, headers={"Accept": "application/vnd.github+json",
+                                            "User-Agent": "MoonJoy-Updater"})
+            with urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode())
+        except (URLError, OSError, json.JSONDecodeError) as e:
+            self.root.after(0, lambda: self.status_var.set(f"Update check failed: {e}"))
+            return
+
+        latest_tag = data.get("tag_name", "").lstrip("v")
+        if not latest_tag:
+            self.root.after(0, lambda: self.status_var.set("No release found"))
+            return
+
+        if latest_tag == __version__:
+            self.root.after(0, lambda: self.status_var.set(f"✓ Already on latest version ({__version__})"))
+            return
+
+        # Find the right asset for this platform
+        suffix_map = {
+            "win32": "win64.msi",
+            "darwin": "macOS.dmg",
+            "linux": "linux-amd64.deb",
+        }
+        suffix = suffix_map.get(sys.platform, "")
+        download_url = data.get("html_url", "")
+        for asset in data.get("assets", []):
+            if suffix and asset["name"].endswith(suffix):
+                download_url = asset["browser_download_url"]
+                break
+
+        def _prompt():
+            self.status_var.set(f"New version available: {latest_tag} (current: {__version__})")
+            from tkinter import messagebox
+            if messagebox.askyesno("Update Available",
+                                   f"MoonJoy {latest_tag} is available.\n"
+                                   f"You have {__version__}.\n\n"
+                                   f"Open download page?"):
+                import webbrowser
+                webbrowser.open(download_url)
+
+        self.root.after(0, _prompt)
+
 
 def run_gui():
     """Entry point for the settings GUI."""
     root = tk.Tk()
-    root.geometry("520x620")
+    root.geometry("520x680")
     icon_path = _asset_path("icon.ico" if sys.platform == "win32" else "logo.png")
     if os.path.isfile(icon_path):
         try:
