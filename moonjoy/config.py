@@ -15,6 +15,7 @@ DEFAULTS = {
     "show_overlay": True,           # show NASA mission info overlay
     "overlay_opacity": 0.85,        # overlay background opacity
     "overlay_scroll_speed": 30,     # seconds per full scroll cycle
+    "images_dir": "",               # custom images directory (empty = auto-detect)
 }
 
 

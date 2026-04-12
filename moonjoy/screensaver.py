@@ -213,10 +213,12 @@ class ScreensaverWindow:
 def run_screensaver():
     """Entry point for screensaver mode."""
     config = load_config()
-    images = scan_images(shuffle=config.get("shuffle", True))
+    from moonjoy.image_scanner import get_images_dir
+    images_dir = get_images_dir(config.get("images_dir", ""))
+    images = scan_images(images_dir=images_dir, shuffle=config.get("shuffle", True))
 
     if not images:
-        print("No images found in Images directory!")
+        print(f"No images found in: {images_dir}")
         sys.exit(1)
 
     root = tk.Tk()

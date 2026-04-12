@@ -71,6 +71,20 @@ class SettingsApp:
         link_label.pack(anchor="w")
         link_label.bind("<Button-1>", lambda e: __import__('webbrowser').open("https://platysoft.com/"))
 
+        # ── Images folder ────────────────────────────────────────────────
+        ttk.Label(main, text="Images Folder", style="Section.TLabel").pack(anchor="w", pady=(10, 5))
+        folder_row = ttk.Frame(main, style="Dark.TFrame")
+        folder_row.pack(fill="x", pady=2)
+        self.images_var = tk.StringVar(value=self.config.get("images_dir", ""))
+        images_entry = tk.Entry(folder_row, textvariable=self.images_var,
+                                bg=self.entry_bg, fg=self.fg, insertbackground=self.fg,
+                                relief="flat", font=("Segoe UI", 10))
+        images_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        browse_btn = tk.Button(folder_row, text="Browse…", command=self._browse_images,
+                               bg=self.btn_bg, fg=self.fg, activebackground="#1a3a6a",
+                               relief="flat", font=("Segoe UI", 9), padx=8, pady=2)
+        browse_btn.pack(side="right")
+
         # ── Screensaver section ──────────────────────────────────────────
         ttk.Label(main, text="Screensaver", style="Section.TLabel").pack(anchor="w", pady=(10, 5))
 
@@ -149,8 +163,16 @@ class SettingsApp:
                                      bg=self.bg, fg="#66bb6a", font=("Segoe UI", 9))
         self.status_label.pack(anchor="w", pady=(10, 0))
 
+    def _browse_images(self):
+        """Open a folder picker for the images directory."""
+        from tkinter import filedialog
+        folder = filedialog.askdirectory(title="Select Images Folder")
+        if folder:
+            self.images_var.set(folder)
+
     def _save(self):
         """Save current settings to config file."""
+        self.config["images_dir"] = self.images_var.get().strip()
         try:
             self.config["slideshow_interval"] = max(1, int(float(self.slide_var.get())))
         except ValueError:
@@ -176,21 +198,27 @@ class SettingsApp:
         """Save settings and launch the screensaver."""
         self._save()
         import subprocess
-        subprocess.Popen([sys.executable, "-m", "moonjoy", "screensaver"])
+        if getattr(sys, "frozen", False):
+            subprocess.Popen([sys.executable, "screensaver"])
+        else:
+            subprocess.Popen([sys.executable, "-m", "moonjoy", "screensaver"])
         self.status_var.set("Screensaver launched!")
 
     def _launch_wallpaper(self):
         """Save settings and launch the wallpaper rotator."""
         self._save()
         import subprocess
-        subprocess.Popen([sys.executable, "-m", "moonjoy", "wallpaper"])
+        if getattr(sys, "frozen", False):
+            subprocess.Popen([sys.executable, "wallpaper"])
+        else:
+            subprocess.Popen([sys.executable, "-m", "moonjoy", "wallpaper"])
         self.status_var.set("Wallpaper rotator started!")
 
 
 def run_gui():
     """Entry point for the settings GUI."""
     root = tk.Tk()
-    root.geometry("520x560")
+    root.geometry("520x620")
     icon_path = _asset_path("icon.ico" if sys.platform == "win32" else "logo.png")
     if os.path.isfile(icon_path):
         try:

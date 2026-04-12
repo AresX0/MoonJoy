@@ -7,14 +7,18 @@ import sys
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tif", ".tiff"}
 
 
-def get_images_dir() -> str:
+def get_images_dir(config_dir: str = "") -> str:
     """Return the path to the Images directory.
 
     Search order:
-    1. Next to the running executable (frozen builds)
-    2. Next to this package (development)
-    3. Current working directory
+    1. Explicit config_dir if provided
+    2. Next to the running executable (frozen builds)
+    3. Next to this package (development)
+    4. Current working directory
     """
+    if config_dir and os.path.isdir(config_dir):
+        return config_dir
+
     candidates = []
 
     # Frozen exe: look next to the exe itself (e.g. C:\Program Files\Platysoft\MoonJoy\Images)
