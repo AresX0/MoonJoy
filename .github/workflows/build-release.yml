@@ -134,7 +134,7 @@ jobs:
         run: |
           python -m PyInstaller \
             --name MoonJoy \
-            --onefile \
+            --onedir \
             --windowed \
             --noconfirm \
             --clean \
@@ -153,40 +153,23 @@ jobs:
             --distpath dist/macos \
             moonjoy/__main__.py
 
+      - name: Patch Info.plist
+        run: |
+          PLIST="dist/macos/MoonJoy.app/Contents/Info.plist"
+          # Add keys required for macOS GUI + Automation permissions
+          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string MoonJoy" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSHighResolutionCapable bool true" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppleEventsUsageDescription string MoonJoy needs permission to change your desktop wallpaper." "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string 11.0" "$PLIST" 2>/dev/null || true
+
+      - name: Ad-hoc code sign
+        run: |
+          codesign --force --deep -s - dist/macos/MoonJoy.app
+
       - name: Create DMG
         run: |
           mkdir -p dist/dmg_staging
-
-          # Create .app bundle from the single executable
-          APP_BUNDLE="dist/dmg_staging/MoonJoy.app"
-          mkdir -p "$APP_BUNDLE/Contents/MacOS"
-          mkdir -p "$APP_BUNDLE/Contents/Resources"
-          cp dist/macos/MoonJoy "$APP_BUNDLE/Contents/MacOS/MoonJoy"
-          chmod +x "$APP_BUNDLE/Contents/MacOS/MoonJoy"
-
-          # Convert icon.icns for the .app bundle
-          cp assets/icon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
-
-          cat > "$APP_BUNDLE/Contents/Info.plist" << 'PLIST'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleName</key><string>MoonJoy</string>
-              <key>CFBundleDisplayName</key><string>MoonJoy</string>
-              <key>CFBundleIdentifier</key><string>com.platysoft.moonjoy</string>
-              <key>CFBundleVersion</key><string>1.0.0</string>
-              <key>CFBundleShortVersionString</key><string>1.0.0</string>
-              <key>CFBundleExecutable</key><string>MoonJoy</string>
-              <key>CFBundlePackageType</key><string>APPL</string>
-              <key>CFBundleIconFile</key><string>AppIcon</string>
-              <key>LSMinimumSystemVersion</key><string>11.0</string>
-              <key>NSHighResolutionCapable</key><true/>
-          </dict>
-          </plist>
-          PLIST
-
+          cp -R dist/macos/MoonJoy.app dist/dmg_staging/
           ln -sf /Applications dist/dmg_staging/Applications
           hdiutil create -volname "MoonJoy" -srcfolder dist/dmg_staging -ov -format UDZO "dist/MoonJoy-1.0.0-macOS.dmg"
 

@@ -141,6 +141,17 @@ def _prepare_image(image_path: str, fit_mode: str = "fit") -> str:
         if sys.platform == "win32":
             user32 = ctypes.windll.user32
             sw, sh = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+        elif sys.platform == "darwin":
+            import re as _re
+            _res = subprocess.run(
+                ["system_profiler", "SPDisplaysDataType"],
+                capture_output=True, text=True, timeout=10,
+            )
+            _m = _re.search(r"Resolution:\s+(\d+)\s*x\s*(\d+)", _res.stdout)
+            if _m:
+                sw, sh = int(_m.group(1)), int(_m.group(2))
+            else:
+                sw, sh = 1920, 1080
         else:
             sw, sh = 1920, 1080  # reasonable default
     except Exception:

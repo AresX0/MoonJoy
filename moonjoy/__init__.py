@@ -2,6 +2,6 @@
 
 Developed by Platysoft — https://platysoft.com/
 """
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 __author__ = "Platysoft"
 __url__ = "https://platysoft.com/"
