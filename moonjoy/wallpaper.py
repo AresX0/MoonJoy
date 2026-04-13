@@ -35,8 +35,13 @@ def _get_font(size: int, bold: bool = False):
     return ImageFont.load_default()
 
 
-def burn_overlay(img: Image.Image, lines: list[str], opacity: float = 0.85) -> Image.Image:
-    """Burn NASA text overlay onto the top-right corner of an image."""
+def burn_overlay(img: Image.Image, lines: list[str], opacity: float = 0.85,
+                 page: int = 0) -> Image.Image:
+    """Burn text overlay onto the top-right corner of an image.
+
+    If the lines don't fit the image height, they are paginated.
+    *page* selects which page to show (wraps around).
+    """
     if not lines:
         return img
 
@@ -55,6 +60,14 @@ def burn_overlay(img: Image.Image, lines: list[str], opacity: float = 0.85) -> I
         f = title_font if line.startswith("═") else font
         bbox = dummy.textbbox((0, 0), line, font=f)
         max_text_w = max(max_text_w, bbox[2] - bbox[0])
+
+    # Calculate how many lines fit on screen
+    max_visible = max(1, (h - 60) // line_height)  # 60 = y_top(20)*2 + padding*2-ish
+    if len(lines) > max_visible:
+        total_pages = (len(lines) + max_visible - 1) // max_visible
+        p = page % total_pages
+        start = p * max_visible
+        lines = lines[start:start + max_visible]
 
     box_w = max_text_w + padding * 2
     box_h = len(lines) * line_height + padding * 2
@@ -147,10 +160,13 @@ def _prepare_image(image_path: str, fit_mode: str = "fit") -> str:
 
 def _fit(img: Image.Image, sw: int, sh: int) -> Image.Image:
     """Scale to fit within screen, centered on black background."""
-    img.thumbnail((sw, sh), Image.LANCZOS)
+    ratio = min(sw / img.width, sh / img.height)
+    new_w = max(1, int(img.width * ratio))
+    new_h = max(1, int(img.height * ratio))
+    img = img.resize((new_w, new_h), Image.LANCZOS)
     bg = Image.new("RGB", (sw, sh), (0, 0, 0))
-    x = (sw - img.width) // 2
-    y = (sh - img.height) // 2
+    x = (sw - new_w) // 2
+    y = (sh - new_h) // 2
     bg.paste(img, (x, y))
     return bg
 
@@ -169,7 +185,8 @@ def _fill(img: Image.Image, sw: int, sh: int) -> Image.Image:
 def set_wallpaper(image_path: str, fit_mode: str = "fit",
                   overlay_lines: list[str] | None = None,
                   overlay_opacity: float = 0.85,
-                  set_lockscreen: bool = False) -> bool:
+                  set_lockscreen: bool = False,
+                  overlay_page: int = 0) -> bool:
     """Set the desktop wallpaper. Returns True on success."""
     try:
         prepared = _prepare_image(image_path, fit_mode)
@@ -181,7 +198,7 @@ def set_wallpaper(image_path: str, fit_mode: str = "fit",
     if overlay_lines:
         try:
             img = Image.open(prepared)
-            img = burn_overlay(img, overlay_lines, overlay_opacity)
+            img = burn_overlay(img, overlay_lines, overlay_opacity, page=overlay_page)
             img.save(prepared)
         except Exception as e:
             print(f"Failed to burn overlay: {e}")

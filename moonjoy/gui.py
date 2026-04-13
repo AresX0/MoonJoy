@@ -20,7 +20,7 @@ class SettingsApp:
 
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("MoonJoy — NASA Screensaver & Wallpaper")
+        self.root.title("MoonJoy — Screensaver & Wallpaper")
         self.root.resizable(False, False)
         self.config = load_config()
 
@@ -63,7 +63,7 @@ class SettingsApp:
         title_col = ttk.Frame(header, style="Dark.TFrame")
         title_col.pack(side="left")
         ttk.Label(title_col, text="MoonJoy", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(title_col, text="NASA Image Screensaver & Wallpaper Rotator",
+        ttk.Label(title_col, text="Space Image Screensaver & Wallpaper Rotator",
                   style="Dark.TLabel").pack(anchor="w")
         link_label = tk.Label(title_col, text="by Platysoft — platysoft.com",
                               bg=self.bg, fg="#7986cb", font=("Segoe UI", 9),
@@ -104,7 +104,7 @@ class SettingsApp:
 
         # Overlay
         self.overlay_var = tk.BooleanVar(value=self.config.get("show_overlay", True))
-        ttk.Checkbutton(main, text="Show NASA mission overlay", variable=self.overlay_var,
+        ttk.Checkbutton(main, text="Show mission overlay", variable=self.overlay_var,
                         style="Dark.TCheckbutton").pack(anchor="w", pady=2)
 
         row_scroll = ttk.Frame(main, style="Dark.TFrame")
@@ -136,7 +136,7 @@ class SettingsApp:
         fit_combo.pack(side="right")
 
         self.wp_overlay_var = tk.BooleanVar(value=self.config.get("wallpaper_overlay", True))
-        ttk.Checkbutton(main, text="Show NASA overlay on desktop wallpaper",
+        ttk.Checkbutton(main, text="Show overlay on desktop wallpaper",
                         variable=self.wp_overlay_var,
                         style="Dark.TCheckbutton").pack(anchor="w", pady=2)
 

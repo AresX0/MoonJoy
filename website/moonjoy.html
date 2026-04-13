@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoonJoy | PlatySoft</title>
+  <meta name="description" content="MoonJoy is a cross-platform space image screensaver and desktop wallpaper rotator. Features Artemis mission overlay, lock screen support, and auto-updates. Free and open-source from Platysoft.">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/moonjoy.css">
+  <link rel="icon" href="/images/logo.png" type="image/png">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav">
+        <a href="/" class="logo">
+          <img src="/images/logo.png" alt="PlatySoft" class="logo-img">
+          <span class="logo-text">PlatySoft</span>
+        </a>
+        <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.querySelector('.nav-links').classList.toggle('open')">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav-links">
+          <a href="/">Home</a>
+          <a href="/platypustools">PlatypusTools</a>
+          <a href="/platypusmatch">PlatypusMatch</a>
+          <a href="/websitedownloader">Website Downloader</a>
+          <a href="/platysearch">PlatySearch</a>
+          <a href="/moonjoy">MoonJoy</a>
+          <a href="/about">About</a>
+          <a href="/blog">Blog</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="mj-page">
+
+    <!-- HERO -->
+    <section class="mj-hero">
+      <div class="mj-container mj-hero-content">
+        <div class="mj-hero-badge">v1.0.1 &mdash; Free &amp; Open Source</div>
+        <h1 class="mj-hero-title">Moon<span>Joy</span></h1>
+        <p class="mj-hero-sub">A cross-platform space image screensaver and desktop wallpaper rotator with live mission overlay. Stunning imagery, zero effort.</p>
+        <div class="mj-hero-badges">
+          <span class="mj-badge mj-badge-py">🐍 Python / Pillow</span>
+          <span class="mj-badge mj-badge-cross">🖥️ Win · Mac · Linux</span>
+          <span class="mj-badge mj-badge-ver">v1.0.1</span>
+        </div>
+        <div class="mj-cta-group">
+          <a href="https://github.com/AresX0/MoonJoy" class="mj-btn mj-btn-primary">★ View on GitHub</a>
+          <a href="https://github.com/AresX0/MoonJoy/releases" class="mj-btn mj-btn-secondary">📦 Download Latest</a>
+        </div>
+        <div class="mj-hero-stats">
+          <div class="mj-stat"><div class="mj-stat-num">10+</div><div class="mj-stat-label">Features</div></div>
+          <div class="mj-stat"><div class="mj-stat-num">3</div><div class="mj-stat-label">Platforms</div></div>
+          <div class="mj-stat"><div class="mj-stat-num">1</div><div class="mj-stat-label">Installer</div></div>
+          <div class="mj-stat"><div class="mj-stat-num">100%</div><div class="mj-stat-label">Free</div></div>
+        </div>
+      </div>
+      <div class="mj-container mj-hero-img">
+        <img src="/images/moonjoy/gui-dark.png" alt="MoonJoy settings window — dark theme" loading="lazy">
+      </div>
+    </section>
+
+    <!-- IN-PAGE NAV -->
+    <nav class="mj-nav-bar">
+      <div class="mj-container">
+        <a href="#mj-features" class="mj-nav-link">Features</a>
+        <a href="#mj-screensaver" class="mj-nav-link">Screensaver</a>
+        <a href="#mj-wallpaper" class="mj-nav-link">Wallpaper</a>
+        <a href="#mj-overlay" class="mj-nav-link">Overlay</a>
+        <a href="#mj-gui" class="mj-nav-link">Settings</a>
+        <a href="#mj-tech" class="mj-nav-link">Tech</a>
+        <a href="#mj-faq" class="mj-nav-link">FAQ</a>
+      </div>
+    </nav>
+
+    <!-- FEATURES OVERVIEW -->
+    <section id="mj-features" class="mj-section">
+      <div class="mj-container">
+        <h2 class="mj-section-title">Everything You Need for the Perfect Desktop</h2>
+        <p class="mj-section-subtitle">Turn your desktop into a window to the cosmos with automatic image slideshows, wallpaper rotation, and live space mission data.</p>
+        <div class="mj-features-grid">
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">🖼️</div>
+            <h4>Fullscreen Screensaver</h4>
+            <p>Beautiful fullscreen slideshow with smooth transitions. Reads images from any folder you choose — JPG, PNG, GIF, BMP, WebP, and TIFF supported.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">🌍</div>
+            <h4>Wallpaper Rotator</h4>
+            <p>Automatically changes your desktop wallpaper at a configurable interval. Supports fit, fill, stretch, and center modes.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">🚀</div>
+            <h4>Mission Overlay</h4>
+            <p>Live scrolling overlay showing Artemis program status and upcoming launches — burned directly onto your wallpaper or displayed on the screensaver.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">🔒</div>
+            <h4>Lock Screen Support</h4>
+            <p>Optionally apply the same wallpaper (with overlay) to your Windows lock screen. Uses safe UAC elevation for the system registry.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">📁</div>
+            <h4>Any Image Folder</h4>
+            <p>Browse and select any folder of images. MoonJoy recursively scans subdirectories so all your photos are included automatically.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">🔀</div>
+            <h4>Shuffle &amp; Sort</h4>
+            <p>Enable shuffle for random variety, or disable it for a predictable ordered slideshow. Your choice persists across sessions.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">⬆️</div>
+            <h4>Auto-Update</h4>
+            <p>Built-in update checker queries GitHub releases. One click to download the latest version — never miss new features.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">🖥️</div>
+            <h4>Cross-Platform</h4>
+            <p>Native installers for Windows (MSI), macOS (DMG), and Linux (.deb). Works with GNOME, KDE, XFCE, Cinnamon, MATE, i3, and more.</p>
+          </div>
+          <div class="mj-feature-card">
+            <div class="mj-fc-icon">🎨</div>
+            <h4>Dark Themed GUI</h4>
+            <p>Sleek dark interface for configuring every setting. Logo, status bar, and section-grouped controls — all without leaving the app.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREENSAVER -->
+    <section id="mj-screensaver" class="mj-section mj-section-alt">
+      <div class="mj-container mj-grid mj-grid-2">
+        <div>
+          <span class="mj-section-label mj-section-label-blue">Core Feature</span>
+          <h2 style="font-size:1.8rem;margin-bottom:12px">Fullscreen Screensaver</h2>
+          <p style="color:var(--mj-muted);margin-bottom:24px">A gorgeous fullscreen image slideshow that activates as your screensaver or on demand.</p>
+          <ul class="mj-feature-list">
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Configurable Interval</strong> — Set slide duration from 1 second to hours. Perfect for ambient displays or quick previews.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Mission Data Overlay</strong> — Real-time scrolling text in the corner showing Artemis missions and upcoming launch dates, color-coded by status.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Instant Exit</strong> — Move the mouse or press any key to smoothly exit the screensaver and return to your desktop.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Windows SCR Integration</strong> — Responds to Windows screensaver flags (/s, /c, /p) so it works natively with Screen Saver Settings.</div></li>
+          </ul>
+        </div>
+        <div class="mj-screenshot">
+          <img src="/images/moonjoy/screensaver.png" alt="MoonJoy screensaver with overlay" loading="lazy">
+          <div class="mj-screenshot-caption">Fullscreen screensaver with scrolling mission overlay</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WALLPAPER ROTATOR -->
+    <section id="mj-wallpaper" class="mj-section">
+      <div class="mj-container mj-grid mj-grid-2">
+        <div class="mj-screenshot mj-order-first">
+          <img src="/images/moonjoy/wallpaper-overlay.png" alt="Desktop wallpaper with mission overlay burned on" loading="lazy">
+          <div class="mj-screenshot-caption">Desktop wallpaper with mission data overlay</div>
+        </div>
+        <div>
+          <span class="mj-section-label mj-section-label-green">Background Daemon</span>
+          <h2 style="font-size:1.8rem;margin-bottom:12px">Wallpaper Rotator</h2>
+          <p style="color:var(--mj-muted);margin-bottom:24px">A background daemon that automatically changes your desktop wallpaper on a schedule.</p>
+          <ul class="mj-feature-list">
+            <li><span class="mj-icon" style="color:var(--mj-accent)">✦</span><div><strong>Configurable Interval</strong> — Rotate every 30 seconds, 5 minutes, or once an hour. You pick the pace.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-accent)">✦</span><div><strong>4 Fit Modes</strong> — <em>Fit</em> (centered on black), <em>Fill</em> (crop to fill), <em>Stretch</em>, and <em>Center</em>. Each image is prepared per your preference before being set.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-accent)">✦</span><div><strong>Overlay Burn</strong> — Optionally burns the mission overlay directly onto the wallpaper image so it's always visible, with paginated display for long data.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-accent)">✦</span><div><strong>Lock Screen Sync</strong> — On Windows, the same wallpaper (with overlay) is applied to your lock screen via safe registry writes with UAC elevation.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-accent)">✦</span><div><strong>Graceful Shutdown</strong> — Responds to Ctrl+C and system signals. Clean exit, no orphaned processes.</div></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- OVERLAY DETAIL -->
+    <section id="mj-overlay" class="mj-section mj-section-alt">
+      <div class="mj-container mj-grid mj-grid-2">
+        <div>
+          <span class="mj-section-label mj-section-label-purple">Live Data</span>
+          <h2 style="font-size:1.8rem;margin-bottom:12px">Space Mission Overlay</h2>
+          <p style="color:var(--mj-muted);margin-bottom:24px">Stay informed about humanity's journey to the Moon — right on your desktop.</p>
+          <ul class="mj-feature-list">
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Artemis Program</strong> — All five Artemis missions with status (Completed, Active, Upcoming), launch dates, durations, and mission types.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Upcoming Launches</strong> — 20+ upcoming missions including ISS resupply, CLPS lunar landers, and deep-space telescopes.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Color-Coded Status</strong> — Green for completed, orange for active, blue for upcoming, purple for launches, cyan for section headers.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>6-Hour Cache</strong> — Data is cached locally and refreshed every 6 hours. Works offline with hardcoded fallback data.</div></li>
+            <li><span class="mj-icon" style="color:var(--mj-primary)">✦</span><div><strong>Paginated on Wallpaper</strong> — When there are more lines than fit the screen, the overlay auto-paginates across wallpaper rotations.</div></li>
+          </ul>
+        </div>
+        <div class="mj-screenshot">
+          <img src="/images/moonjoy/overlay-detail.png" alt="Close-up of mission data overlay" loading="lazy">
+          <div class="mj-screenshot-caption">Mission overlay — color-coded by status</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GUI SETTINGS -->
+    <section id="mj-gui" class="mj-section">
+      <div class="mj-container mj-grid mj-grid-2">
+        <div class="mj-screenshot mj-order-first">
+          <img src="/images/moonjoy/gui-dark.png" alt="MoonJoy settings GUI" loading="lazy">
+          <div class="mj-screenshot-caption">Settings GUI — dark themed with Platysoft branding</div>
+        </div>
+        <div>
+          <span class="mj-section-label mj-section-label-blue">Configuration</span>
+          <h2 style="font-size:1.8rem;margin-bottom:12px">Settings GUI</h2>
+          <p style="color:var(--mj-muted);margin-bottom:24px">Every option is accessible from a single dark-themed window — no config files to edit.</p>
+          <div class="mj-info-grid">
+            <div class="mj-info-box">
+              <h4>📁 Images Folder</h4>
+              <p>Browse to select any folder. MoonJoy recursively scans for images in all subdirectories.</p>
+            </div>
+            <div class="mj-info-box">
+              <h4>🖼️ Screensaver</h4>
+              <p>Slide interval, shuffle toggle, mission overlay toggle and scroll speed.</p>
+            </div>
+            <div class="mj-info-box">
+              <h4>🌍 Wallpaper</h4>
+              <p>Change interval, fit mode selector, overlay burn and lock screen toggles.</p>
+            </div>
+            <div class="mj-info-box">
+              <h4>⬆️ Updates</h4>
+              <p>One-click update check queries GitHub releases. Opens the download page if a new version is found.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TECH SPECS -->
+    <section id="mj-tech" class="mj-section mj-section-alt">
+      <div class="mj-container">
+        <h2 class="mj-section-title">Technical Details</h2>
+        <p class="mj-section-subtitle">Built with Python and Pillow for maximum portability and reliability.</p>
+        <div class="mj-specs">
+          <div class="mj-spec">
+            <h4>Platform</h4>
+            <ul>
+              <li>Python 3.12+ / Pillow / tkinter</li>
+              <li>Windows 10/11, macOS, Linux</li>
+              <li>Self-contained PyInstaller binary</li>
+              <li>MSI, DMG, and .deb installers</li>
+            </ul>
+          </div>
+          <div class="mj-spec">
+            <h4>Architecture</h4>
+            <ul>
+              <li>Modular package (moonjoy.*)</li>
+              <li>JSON config at %APPDATA%</li>
+              <li>Background daemon for wallpaper</li>
+              <li>Threaded data loading</li>
+            </ul>
+          </div>
+          <div class="mj-spec">
+            <h4>Image Processing</h4>
+            <ul>
+              <li>Pillow for resize, crop, overlay</li>
+              <li>Fit / Fill / Stretch / Center modes</li>
+              <li>JPG, PNG, GIF, BMP, WebP, TIFF</li>
+              <li>Overlay burn with alpha compositing</li>
+            </ul>
+          </div>
+          <div class="mj-spec">
+            <h4>Installers</h4>
+            <ul>
+              <li>Windows: WiX 5 MSI (Program Files)</li>
+              <li>macOS: DMG with .app bundle</li>
+              <li>Linux: .deb with desktop entry</li>
+              <li>GitHub Actions CI/CD</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 style="text-align:center;margin:48px 0 12px;color:var(--mj-text);font-size:1.3rem">System Requirements</h3>
+        <div style="max-width:600px;margin:0 auto">
+          <table class="mj-table">
+            <tr><th>Requirement</th><th>Details</th></tr>
+            <tr><td>Operating System</td><td>Windows 10+, macOS 12+, Ubuntu 22.04+ (x64)</td></tr>
+            <tr><td>Disk Space</td><td>~50 MB (self-contained binary)</td></tr>
+            <tr><td>RAM</td><td>128 MB min, 256 MB+ recommended</td></tr>
+            <tr><td>Prerequisites</td><td>None &mdash; everything bundled</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="mj-faq" class="mj-section">
+      <div class="mj-container">
+        <h2 class="mj-section-title">Frequently Asked Questions</h2>
+        <p class="mj-section-subtitle">Common questions about MoonJoy.</p>
+        <div class="mj-faq" style="max-width:800px;margin:0 auto">
+          <details>
+            <summary>Where does MoonJoy look for images?</summary>
+            <div class="mj-answer">By default, it looks for an <code>images</code> folder next to the executable. You can change this in the Settings GUI using the Browse button, or by editing the JSON config at <code>%APPDATA%\MoonJoy\moonjoy_config.json</code>.</div>
+          </details>
+          <details>
+            <summary>Can I use it as a Windows screensaver?</summary>
+            <div class="mj-answer">Yes! MoonJoy responds to Windows screensaver flags (<code>/s</code>, <code>/c</code>, <code>/p</code>). Rename the exe to <code>.scr</code> and place it in <code>C:\Windows\System32</code>, or launch it from the GUI.</div>
+          </details>
+          <details>
+            <summary>How do I change the wallpaper rotation interval?</summary>
+            <div class="mj-answer">Open the Settings GUI (&rarr; Wallpaper Rotator section) and set the "Change interval" in seconds. Default is 300 (5 minutes). Click Save Settings to persist.</div>
+          </details>
+          <details>
+            <summary>What are the fit modes?</summary>
+            <div class="mj-answer"><strong>Fit</strong>: scales the image to fit within the screen, centered on a black background. <strong>Fill</strong>: scales to cover the entire screen, cropping excess. <strong>Stretch</strong>: stretches to exact screen dimensions. <strong>Center</strong>: places the image at its original size in the center.</div>
+          </details>
+          <details>
+            <summary>Does the overlay update automatically?</summary>
+            <div class="mj-answer">Yes. Mission data is cached for 6 hours and refreshed from nasa.gov. If the network is unavailable, hardcoded fallback data is used.</div>
+          </details>
+          <details>
+            <summary>How does the lock screen feature work?</summary>
+            <div class="mj-answer">On Windows, MoonJoy writes the wallpaper path to the <code>HKLM\PersonalizationCSP</code> registry key. This requires admin privileges, so a UAC prompt will appear. On Linux, the lock screen is set via the appropriate desktop environment commands.</div>
+          </details>
+          <details>
+            <summary>Does it work on macOS?</summary>
+            <div class="mj-answer">Yes. The wallpaper is set via AppleScript (<code>osascript</code>) which works on all recent macOS versions. A DMG installer with a proper .app bundle is provided.</div>
+          </details>
+          <details>
+            <summary>How do I check for updates?</summary>
+            <div class="mj-answer">Click the "Check for Updates" button in the Settings GUI. It queries the GitHub Releases API and offers to open the download page if a newer version is found.</div>
+          </details>
+          <details>
+            <summary>What image formats are supported?</summary>
+            <div class="mj-answer">JPG, JPEG, PNG, GIF, BMP, WebP, TIFF, and TIF. The scanner finds all matching files recursively in the configured folder.</div>
+          </details>
+          <details>
+            <summary>How do I uninstall?</summary>
+            <div class="mj-answer"><strong>Windows</strong>: Settings &rarr; Apps &rarr; Installed Apps &rarr; MoonJoy &rarr; Uninstall. <strong>macOS</strong>: Drag MoonJoy.app to trash. <strong>Linux</strong>: <code>sudo dpkg -r moonjoy</code>. Config is at <code>%APPDATA%\MoonJoy</code> (Windows) or <code>~/.config/moonjoy</code> (Linux/macOS).</div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD CTA -->
+    <section class="mj-download-section">
+      <div class="mj-container">
+        <h2>Ready to Transform Your Desktop?</h2>
+        <p>Get MoonJoy free &mdash; stunning space images and live mission data on your desktop, lock screen, and screensaver.</p>
+        <div class="mj-cta-group">
+          <a href="https://github.com/AresX0/MoonJoy" class="mj-btn mj-btn-primary">★ View on GitHub</a>
+          <a href="https://github.com/AresX0/MoonJoy/releases" class="mj-btn mj-btn-secondary">📦 Download Latest</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIGHTBOX -->
+    <div class="mj-lightbox" id="mjLightbox" onclick="this.classList.remove('active')">
+      <img id="mjLightboxImg" src="" alt="Screenshot preview">
+    </div>
+    <script>
+    document.querySelectorAll('.mj-screenshot, .mj-theme-card').forEach(function(el) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function(e) {
+        var img = el.querySelector('img');
+        if (!img) return;
+        var lb = document.getElementById('mjLightbox');
+        var lbImg = document.getElementById('mjLightboxImg');
+        lbImg.src = img.src;
+        lbImg.alt = img.alt;
+        lb.classList.add('active');
+        e.stopPropagation();
+      });
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') document.getElementById('mjLightbox').classList.remove('active');
+    });
+    </script>
+
+    </div><!-- end .mj-page -->
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 PlatySoft. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>

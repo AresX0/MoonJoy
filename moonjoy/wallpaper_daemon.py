@@ -39,7 +39,7 @@ def run_wallpaper_daemon():
     print(f"  Found {len(images)} images")
     print(f"  Changing every {interval} seconds")
     print(f"  Fit mode: {fit_mode}")
-    print(f"  NASA overlay: {'on' if overlay_lines else 'off'}")
+    print(f"  Overlay: {'on' if overlay_lines else 'off'}")
     print(f"  Lock screen: {'on' if set_lockscreen else 'off'}")
     print(f"  Press Ctrl+C to stop\n")
 
@@ -54,18 +54,21 @@ def run_wallpaper_daemon():
     signal.signal(signal.SIGTERM, _stop)
 
     idx = 0
+    overlay_page = 0
     while running:
         path = images[idx % len(images)]
         success = set_wallpaper(path, fit_mode,
                                 overlay_lines=overlay_lines,
                                 overlay_opacity=overlay_opacity,
-                                set_lockscreen=set_lockscreen)
+                                set_lockscreen=set_lockscreen,
+                                overlay_page=overlay_page)
         if success:
             print(f"  Wallpaper: {path}")
         else:
             print(f"  Failed: {path}")
 
         idx += 1
+        overlay_page += 1
 
         # Sleep in small increments so we can respond to signals
         elapsed = 0.0

@@ -3,6 +3,7 @@
 # ── Images (large, not tracked in git) ──
 Images/
 images/
+!website/images/
 
 # ── Python ──
 __pycache__/
