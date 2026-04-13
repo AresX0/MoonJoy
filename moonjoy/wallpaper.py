@@ -335,7 +335,11 @@ for (var i = 0; i < allDesktops.length; i++) {{
 
 
 def _set_lockscreen_windows(path: str) -> bool:
-    """Set Windows lock screen image via HKLM registry with UAC elevation."""
+    """Set Windows lock screen image via HKLM registry with UAC elevation.
+
+    The registry is pointed at a fixed file path. After the first UAC-elevated
+    run, subsequent calls just overwrite that file — no more UAC prompts.
+    """
     lock_dir = os.path.join(tempfile.gettempdir(), "moonjoy_wallpaper")
     os.makedirs(lock_dir, exist_ok=True)
     lock_path = os.path.join(lock_dir, "lockscreen.jpg")
@@ -345,6 +349,22 @@ def _set_lockscreen_windows(path: str) -> bool:
     except Exception as e:
         print(f"  Lock screen: failed to prepare image: {e}")
         return False
+
+    # Check if registry already points to our lock_path — skip UAC if so
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP",
+            0, winreg.KEY_READ
+        )
+        existing, _ = winreg.QueryValueEx(key, "LockScreenImagePath")
+        winreg.CloseKey(key)
+        if existing == lock_path:
+            # Registry already set; just overwriting the file is enough
+            return True
+    except (OSError, FileNotFoundError):
+        pass  # Key doesn't exist yet — need UAC to create it
 
     # Write a temp .ps1 script, then elevate it via Start-Process -Verb RunAs
     script_path = os.path.join(lock_dir, "set_lockscreen.ps1")
