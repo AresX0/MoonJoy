@@ -55,17 +55,27 @@ def run_wallpaper_daemon():
 
     idx = 0
     overlay_page = 0
+    shuffle = config.get("shuffle", True)
     while running:
-        path = images[idx % len(images)]
+        # Once we've shown every image, rescan & reshuffle for a fresh cycle
+        if idx >= len(images):
+            images = scan_images(images_dir=images_dir, shuffle=shuffle)
+            if not images:
+                print("  No images found, stopping.")
+                break
+            idx = 0
+            print(f"  Completed full cycle — reshuffled {len(images)} images")
+
+        path = images[idx]
         success = set_wallpaper(path, fit_mode,
                                 overlay_lines=overlay_lines,
                                 overlay_opacity=overlay_opacity,
                                 set_lockscreen=set_lockscreen,
                                 overlay_page=overlay_page)
         if success:
-            print(f"  Wallpaper: {path}")
+            print(f"  [{idx+1}/{len(images)}] Wallpaper: {path}")
         else:
-            print(f"  Failed: {path}")
+            print(f"  [{idx+1}/{len(images)}] Failed: {path}")
 
         idx += 1
         overlay_page += 1
