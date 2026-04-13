@@ -318,25 +318,34 @@ for (var i = 0; i < allDesktops.length; i++) {{
 
 
 def _set_lockscreen_windows(path: str) -> bool:
-    """Set Windows lock screen image via registry."""
+    """Set Windows lock screen image via HKLM registry with UAC elevation."""
+    lock_dir = os.path.join(tempfile.gettempdir(), "moonjoy_wallpaper")
+    os.makedirs(lock_dir, exist_ok=True)
+    lock_path = os.path.join(lock_dir, "lockscreen.jpg")
     try:
-        import winreg
-        # Copy image to a stable location
-        lock_dir = os.path.join(tempfile.gettempdir(), "moonjoy_wallpaper")
-        lock_path = os.path.join(lock_dir, "lockscreen.jpg")
         img = Image.open(path)
         img.save(lock_path, "JPEG", quality=95)
-
-        # Enable custom lock screen and set image path via registry
-        key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
-        with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
-            winreg.SetValueEx(key, "LockScreenImageStatus", 0, winreg.REG_DWORD, 1)
-            winreg.SetValueEx(key, "LockScreenImagePath", 0, winreg.REG_SZ, lock_path)
-            winreg.SetValueEx(key, "LockScreenImageUrl", 0, winreg.REG_SZ, lock_path)
-        return True
-    except PermissionError:
-        print("  Lock screen: requires admin privileges (skipped)")
+    except Exception as e:
+        print(f"  Lock screen: failed to prepare image: {e}")
         return False
+
+    # Write a temp .ps1 script, then elevate it via Start-Process -Verb RunAs
+    script_path = os.path.join(lock_dir, "set_lockscreen.ps1")
+    with open(script_path, "w", encoding="utf-8") as f:
+        f.write(f'$p = "{lock_path}"\n')
+        f.write('$k = "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PersonalizationCSP"\n')
+        f.write('if (!(Test-Path $k)) { New-Item -Path $k -Force | Out-Null }\n')
+        f.write('Set-ItemProperty -Path $k -Name LockScreenImageStatus -Value 1 -Type DWord\n')
+        f.write('Set-ItemProperty -Path $k -Name LockScreenImagePath -Value $p -Type String\n')
+        f.write('Set-ItemProperty -Path $k -Name LockScreenImageUrl -Value $p -Type String\n')
+
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             f"Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \"{script_path}\"' -Verb RunAs -Wait"],
+            capture_output=True, text=True, timeout=60
+        )
+        return result.returncode == 0
     except Exception as e:
         print(f"  Lock screen failed: {e}")
         return False
