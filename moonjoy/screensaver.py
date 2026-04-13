@@ -56,8 +56,9 @@ class ScreensaverWindow:
 
         if self.show_overlay:
             # Load overlay data in background thread to avoid blocking
-            self._overlay_font = tkfont.Font(family="Consolas", size=11, weight="normal")
-            self._overlay_title_font = tkfont.Font(family="Consolas", size=12, weight="bold")
+            mono_family = "Consolas" if sys.platform == "win32" else "DejaVu Sans Mono"
+            self._overlay_font = tkfont.Font(family=mono_family, size=11, weight="normal")
+            self._overlay_title_font = tkfont.Font(family=mono_family, size=12, weight="bold")
             threading.Thread(target=self._load_overlay_data, daemon=True).start()
 
         # Exit on any input

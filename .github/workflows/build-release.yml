@@ -203,7 +203,6 @@ jobs:
           python -m PyInstaller \
             --name MoonJoy \
             --onefile \
-            --windowed \
             --noconfirm \
             --clean \
             --add-data "assets:assets" \
@@ -216,6 +215,8 @@ jobs:
             --hidden-import moonjoy.image_scanner \
             --hidden-import moonjoy.nasa_data \
             --hidden-import moonjoy.wallpaper \
+            --hidden-import _tkinter \
+            --collect-all tkinter \
             --distpath dist/linux \
             moonjoy/__main__.py
 
@@ -241,12 +242,13 @@ jobs:
           Section: graphics
           Priority: optional
           Architecture: amd64
+          Depends: libx11-6, libxft2, libxss1, libxext6, fonts-dejavu-core
           Maintainer: Platysoft <info@platysoft.com>
           Homepage: https://platysoft.com/
           Description: NASA Image Screensaver & Wallpaper Rotator
            MoonJoy is a self-contained screensaver and wallpaper rotator
            featuring NASA imagery with live Artemis mission data overlay.
-           No external dependencies required. By Platysoft.
+           By Platysoft.
           CTRL
           # Strip leading whitespace from heredoc
           sed -i 's/^          //' "$PKG_DIR/DEBIAN/control"

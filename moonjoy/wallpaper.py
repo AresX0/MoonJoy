@@ -32,6 +32,27 @@ def _get_font(size: int, bold: bool = False):
                     return ImageFont.truetype(path, size)
                 except (OSError, IOError):
                     pass
+    else:
+        # Linux / macOS font directories
+        linux_font_dirs = [
+            "/usr/share/fonts/truetype/dejavu",
+            "/usr/share/fonts/truetype/liberation",
+            "/usr/share/fonts/TTF",
+            "/usr/share/fonts",
+            os.path.expanduser("~/.local/share/fonts"),
+        ]
+        linux_fonts = [
+            "DejaVuSansMono.ttf", "DejaVuSansMono-Bold.ttf" if bold else "DejaVuSansMono.ttf",
+            "LiberationMono-Regular.ttf", "FreeMono.ttf",
+        ]
+        for font_dir in linux_font_dirs:
+            for name in linux_fonts:
+                path = os.path.join(font_dir, name)
+                if os.path.isfile(path):
+                    try:
+                        return ImageFont.truetype(path, size)
+                    except (OSError, IOError):
+                        pass
     return ImageFont.load_default()
 
 
@@ -153,7 +174,17 @@ def _prepare_image(image_path: str, fit_mode: str = "fit") -> str:
             else:
                 sw, sh = 1920, 1080
         else:
-            sw, sh = 1920, 1080  # reasonable default
+            # Linux: try xrandr to detect screen resolution
+            import re as _re
+            _res = subprocess.run(
+                ["xrandr", "--current"],
+                capture_output=True, text=True, timeout=10,
+            )
+            _m = _re.search(r"(\d{3,5})x(\d{3,5})\s+\d+\.\d+\*", _res.stdout)
+            if _m:
+                sw, sh = int(_m.group(1)), int(_m.group(2))
+            else:
+                sw, sh = 1920, 1080
     except Exception:
         sw, sh = 1920, 1080
 
