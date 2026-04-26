@@ -53,11 +53,13 @@ jobs:
       - name: Create MSI with WiX
         shell: pwsh
         run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+
           # WiX source — single exe, desktop + start menu shortcuts
           $wxsContent = @"
           <?xml version="1.0" encoding="UTF-8"?>
           <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-            <Package Name="MoonJoy" Manufacturer="Platysoft" Version="1.0.0"
+            <Package Name="MoonJoy" Manufacturer="Platysoft" Version="$version"
                      UpgradeCode="7A3B62D0-9F1E-4C8A-B5D2-000000000001"
                      InstallerVersion="500" Scope="perMachine">
               <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
@@ -104,13 +106,13 @@ jobs:
           dotnet tool install --global wix --version 5.0.2
 
           # Build MSI
-          wix build -o dist/windows/MoonJoy-1.0.0-win64.msi dist/MoonJoy.wxs
+          wix build -o "dist/windows/MoonJoy-$version-win64.msi" dist/MoonJoy.wxs
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-msi
-          path: dist/windows/MoonJoy-1.0.0-win64.msi
+          path: dist/windows/MoonJoy-*-win64.msi
 
   # ═══════════════════════════════════════════════════════════════
   # macOS DMG
@@ -168,16 +170,17 @@ jobs:
 
       - name: Create DMG
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p dist/dmg_staging
           cp -R dist/macos/MoonJoy.app dist/dmg_staging/
           ln -sf /Applications dist/dmg_staging/Applications
-          hdiutil create -volname "MoonJoy" -srcfolder dist/dmg_staging -ov -format UDZO "dist/MoonJoy-1.0.0-macOS.dmg"
+          hdiutil create -volname "MoonJoy" -srcfolder dist/dmg_staging -ov -format UDZO "dist/MoonJoy-${VERSION}-macOS.dmg"
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
-          path: dist/MoonJoy-1.0.0-macOS.dmg
+          path: dist/MoonJoy-*-macOS.dmg
 
   # ═══════════════════════════════════════════════════════════════
   # Linux .deb
@@ -222,7 +225,8 @@ jobs:
 
       - name: Create .deb package
         run: |
-          PKG_DIR="dist/moonjoy_1.0.0_amd64"
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG_DIR="dist/moonjoy_${VERSION}_amd64"
           mkdir -p "$PKG_DIR/DEBIAN"
           mkdir -p "$PKG_DIR/opt/moonjoy"
           mkdir -p "$PKG_DIR/usr/share/applications"
@@ -236,9 +240,9 @@ jobs:
           mkdir -p "$PKG_DIR/usr/share/icons/hicolor/256x256/apps"
           cp assets/logo.png "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/moonjoy.png"
 
-          cat > "$PKG_DIR/DEBIAN/control" << 'CTRL'
+          cat > "$PKG_DIR/DEBIAN/control" << CTRL
           Package: moonjoy
-          Version: 1.0.0
+          Version: ${VERSION}
           Section: graphics
           Priority: optional
           Architecture: amd64
@@ -281,13 +285,13 @@ jobs:
           sed -i 's/^          //' "$PKG_DIR/usr/share/applications/moonjoy.desktop"
 
           dpkg-deb --build --root-owner-group "$PKG_DIR"
-          mv dist/moonjoy_1.0.0_amd64.deb dist/MoonJoy-1.0.0-linux-amd64.deb
+          mv "dist/moonjoy_${VERSION}_amd64.deb" "dist/MoonJoy-${VERSION}-linux-amd64.deb"
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-deb
-          path: dist/MoonJoy-1.0.0-linux-amd64.deb
+          path: dist/MoonJoy-*-linux-amd64.deb
 
   # ═══════════════════════════════════════════════════════════════
   # Create GitHub Release
@@ -319,9 +323,9 @@ jobs:
 
             | Platform | File | Install |
             |----------|------|---------|
-            | **Windows** | `MoonJoy-1.0.0-win64.msi` | Double-click MSI to install |
-            | **macOS** | `MoonJoy-1.0.0-macOS.dmg` | Open DMG, drag to Applications |
-            | **Linux** | `MoonJoy-1.0.0-linux-amd64.deb` | `sudo dpkg -i MoonJoy-*.deb` |
+            | **Windows** | `MoonJoy-<version>-win64.msi` | Double-click MSI to install |
+            | **macOS** | `MoonJoy-<version>-macOS.dmg` | Open DMG, drag to Applications |
+            | **Linux** | `MoonJoy-<version>-linux-amd64.deb` | `sudo dpkg -i MoonJoy-*.deb` |
 
             ### Features
             - 🖼️ Fullscreen screensaver slideshow of NASA imagery
@@ -341,6 +345,6 @@ jobs:
             ---
             *[platysoft.com](https://platysoft.com/)*
           files: |
-            artifacts/windows-msi/MoonJoy-1.0.0-win64.msi
-            artifacts/macos-dmg/MoonJoy-1.0.0-macOS.dmg
-            artifacts/linux-deb/MoonJoy-1.0.0-linux-amd64.deb
+            artifacts/windows-msi/*.msi
+            artifacts/macos-dmg/*.dmg
+            artifacts/linux-deb/*.deb

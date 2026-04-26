@@ -3,9 +3,27 @@
 import os
 import sys
 import tkinter as tk
+from tkinter import messagebox
 from tkinter import ttk
+import webbrowser
 
+from moonjoy.autostart import (
+    disable_wallpaper_autostart,
+    enable_wallpaper_autostart,
+    is_wallpaper_autostart_enabled,
+    spawn_wallpaper_background,
+)
 from moonjoy.config import load_config, save_config
+from moonjoy.updater import (
+    UpdateError,
+    download_file,
+    get_latest_release,
+    install_linux_deb,
+    install_macos_dmg,
+    install_windows_msi,
+    is_newer_version,
+    select_release_asset,
+)
 
 
 def _asset_path(filename: str) -> str:
@@ -18,7 +36,7 @@ def _asset_path(filename: str) -> str:
 class SettingsApp:
     """Tkinter GUI for MoonJoy settings."""
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, start_minimized: bool = False):
         self.root = root
         self.root.title("MoonJoy — Screensaver & Wallpaper")
         self.root.resizable(False, False)
@@ -144,6 +162,18 @@ class SettingsApp:
                         variable=self.wp_overlay_var,
                         style="Dark.TCheckbutton").pack(anchor="w", pady=2)
 
+        self.autostart_var = tk.BooleanVar(value=is_wallpaper_autostart_enabled())
+        ttk.Checkbutton(main, text="Run wallpaper rotator at login",
+                        variable=self.autostart_var,
+                        style="Dark.TCheckbutton").pack(anchor="w", pady=2)
+
+        self.minimize_var = tk.BooleanVar(
+            value=self.config.get("minimize_on_wallpaper_start", True)
+        )
+        ttk.Checkbutton(main, text="Minimize settings window after starting rotator",
+                        variable=self.minimize_var,
+                        style="Dark.TCheckbutton").pack(anchor="w", pady=2)
+
         self.lockscreen_var = tk.BooleanVar(value=self.config.get("apply_to_lockscreen", True))
         ttk.Checkbutton(main, text="Apply to lock screen (Windows)",
                         variable=self.lockscreen_var,
@@ -186,6 +216,9 @@ class SettingsApp:
                                      bg=self.bg, fg="#66bb6a", font=(self._fn, 9))
         self.status_label.pack(anchor="w", pady=(10, 0))
 
+        if start_minimized:
+            self.root.after(0, self.root.iconify)
+
     def _browse_images(self):
         """Open a folder picker for the images directory."""
         from tkinter import filedialog
@@ -213,10 +246,24 @@ class SettingsApp:
         self.config["show_overlay"] = self.overlay_var.get()
         self.config["wallpaper_overlay"] = self.wp_overlay_var.get()
         self.config["apply_to_lockscreen"] = self.lockscreen_var.get()
+        self.config["wallpaper_autostart"] = self.autostart_var.get()
+        self.config["minimize_on_wallpaper_start"] = self.minimize_var.get()
         self.config["fit_mode"] = self.fit_var.get()
 
         save_config(self.config)
-        self.status_var.set("✓ Settings saved!")
+
+        try:
+            message = (
+                enable_wallpaper_autostart()
+                if self.autostart_var.get()
+                else disable_wallpaper_autostart()
+            )
+        except Exception as exc:
+            self.status_var.set(f"Autostart update failed: {exc}")
+            self.root.after(5000, lambda: self.status_var.set(""))
+            return
+
+        self.status_var.set(f"✓ Settings saved! {message}")
         self.root.after(3000, lambda: self.status_var.set(""))
 
     def _launch_screensaver(self):
@@ -232,12 +279,18 @@ class SettingsApp:
     def _launch_wallpaper(self):
         """Save settings and launch the wallpaper rotator."""
         self._save()
-        import subprocess
-        if getattr(sys, "frozen", False):
-            subprocess.Popen([sys.executable, "wallpaper"])
+        try:
+            spawn_wallpaper_background()
+        except Exception as exc:
+            messagebox.showerror("MoonJoy", f"Failed to start wallpaper rotator:\n{exc}")
+            self.status_var.set("Wallpaper rotator failed to start")
+            return
+
+        if self.minimize_var.get():
+            self.root.iconify()
+            self.status_var.set("Wallpaper rotator started in background. Window minimized.")
         else:
-            subprocess.Popen([sys.executable, "-m", "moonjoy", "wallpaper"])
-        self.status_var.set("Wallpaper rotator started!")
+            self.status_var.set("Wallpaper rotator started in background.")
 
     def _check_update(self):
         """Check GitHub for a newer release and offer to download it."""
@@ -247,20 +300,11 @@ class SettingsApp:
 
     def _do_update_check(self):
         """Background thread: fetch latest release info from GitHub."""
-        import json
-        from urllib.request import urlopen, Request
-        from urllib.error import URLError
-
         from moonjoy import __version__
-
-        api_url = "https://api.github.com/repos/AresX0/MoonJoy/releases/latest"
         try:
-            req = Request(api_url, headers={"Accept": "application/vnd.github+json",
-                                            "User-Agent": "MoonJoy-Updater"})
-            with urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read().decode())
-        except (URLError, OSError, json.JSONDecodeError) as e:
-            self.root.after(0, lambda: self.status_var.set(f"Update check failed: {e}"))
+            data = get_latest_release()
+        except UpdateError as e:
+            self.root.after(0, lambda: self.status_var.set(str(e)))
             return
 
         latest_tag = data.get("tag_name", "").lstrip("v")
@@ -268,37 +312,62 @@ class SettingsApp:
             self.root.after(0, lambda: self.status_var.set("No release found"))
             return
 
-        if latest_tag == __version__:
+        if not is_newer_version(latest_tag, __version__):
             self.root.after(0, lambda: self.status_var.set(f"✓ Already on latest version ({__version__})"))
             return
 
-        # Find the right asset for this platform
-        suffix_map = {
-            "win32": "win64.msi",
-            "darwin": "macOS.dmg",
-            "linux": "linux-amd64.deb",
-        }
-        suffix = suffix_map.get(sys.platform, "")
+        asset = select_release_asset(data)
         download_url = data.get("html_url", "")
-        for asset in data.get("assets", []):
-            if suffix and asset["name"].endswith(suffix):
-                download_url = asset["browser_download_url"]
-                break
+        if asset:
+            download_url = asset.get("browser_download_url", download_url)
+
+        def _install_platform_update() -> None:
+            if not asset:
+                messagebox.showerror("Update Failed", "No installer asset found in the latest release.")
+                return
+            try:
+                self.status_var.set(f"Downloading MoonJoy {latest_tag} installer…")
+                local_installer = download_file(download_url, asset.get("name", f"MoonJoy-{latest_tag}"))
+                if sys.platform == "win32":
+                    install_windows_msi(local_installer)
+                elif sys.platform == "darwin":
+                    install_macos_dmg(local_installer)
+                elif sys.platform == "linux":
+                    install_linux_deb(local_installer)
+                else:
+                    raise UpdateError("Automatic install is not supported on this platform")
+            except UpdateError as exc:
+                messagebox.showerror("Update Failed", str(exc))
+                self.status_var.set("Update failed")
+                return
+
+            self.status_var.set("Installer started. MoonJoy will close for update.")
+            self.root.after(800, self.root.destroy)
 
         def _prompt():
             self.status_var.set(f"New version available: {latest_tag} (current: {__version__})")
-            from tkinter import messagebox
-            if messagebox.askyesno("Update Available",
-                                   f"MoonJoy {latest_tag} is available.\n"
-                                   f"You have {__version__}.\n\n"
-                                   f"Open download page?"):
-                import webbrowser
+            if sys.platform in ("win32", "darwin", "linux") and asset:
+                if messagebox.askyesno(
+                    "Update Available",
+                    f"MoonJoy {latest_tag} is available.\n"
+                    f"You have {__version__}.\n\n"
+                    "Install now? This will replace the old version.",
+                ):
+                    _install_platform_update()
+                return
+
+            if messagebox.askyesno(
+                "Update Available",
+                f"MoonJoy {latest_tag} is available.\n"
+                f"You have {__version__}.\n\n"
+                "Open download page?",
+            ):
                 webbrowser.open(download_url)
 
         self.root.after(0, _prompt)
 
 
-def run_gui():
+def run_gui(start_minimized: bool = False):
     """Entry point for the settings GUI."""
     root = tk.Tk()
     root.geometry("520x680")
@@ -311,7 +380,7 @@ def run_gui():
                 root.iconphoto(True, tk.PhotoImage(file=icon_path))
         except Exception:
             pass
-    SettingsApp(root)
+    SettingsApp(root, start_minimized=start_minimized)
     root.mainloop()
 
 

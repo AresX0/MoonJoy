@@ -17,6 +17,8 @@ DEFAULTS = {
     "apply_to_lockscreen": True,    # also set as Windows lock screen
     "overlay_opacity": 0.85,        # overlay background opacity
     "overlay_scroll_speed": 30,     # seconds per full scroll cycle
+    "wallpaper_autostart": False,   # run wallpaper rotator at user login
+    "minimize_on_wallpaper_start": True,
     "images_dir": "",               # custom images directory (empty = auto-detect)
 }
 
