@@ -325,24 +325,50 @@ class SettingsApp:
             if not asset:
                 messagebox.showerror("Update Failed", "No installer asset found in the latest release.")
                 return
-            try:
-                self.status_var.set(f"Downloading MoonJoy {latest_tag} installer…")
-                local_installer = download_file(download_url, asset.get("name", f"MoonJoy-{latest_tag}"))
-                if sys.platform == "win32":
-                    install_windows_msi(local_installer)
-                elif sys.platform == "darwin":
-                    install_macos_dmg(local_installer)
-                elif sys.platform == "linux":
-                    install_linux_deb(local_installer)
-                else:
-                    raise UpdateError("Automatic install is not supported on this platform")
-            except UpdateError as exc:
-                messagebox.showerror("Update Failed", str(exc))
-                self.status_var.set("Update failed")
-                return
 
-            self.status_var.set("Installer started. MoonJoy will close for update.")
-            self.root.after(800, self.root.destroy)
+            def _worker() -> None:
+                try:
+                    self.root.after(
+                        0,
+                        lambda: self.status_var.set(
+                            f"Downloading MoonJoy {latest_tag} installer…"
+                        ),
+                    )
+                    local_installer = download_file(
+                        download_url, asset.get("name", f"MoonJoy-{latest_tag}")
+                    )
+                    self.root.after(
+                        0,
+                        lambda: self.status_var.set(
+                            f"Installing MoonJoy {latest_tag}…"
+                        ),
+                    )
+                    if sys.platform == "win32":
+                        install_windows_msi(local_installer)
+                    elif sys.platform == "darwin":
+                        install_macos_dmg(local_installer)
+                    elif sys.platform == "linux":
+                        install_linux_deb(local_installer)
+                    else:
+                        raise UpdateError(
+                            "Automatic install is not supported on this platform"
+                        )
+                except UpdateError as exc:
+                    msg = str(exc)
+                    self.root.after(0, lambda: messagebox.showerror("Update Failed", msg))
+                    self.root.after(0, lambda: self.status_var.set("Update failed"))
+                    return
+
+                self.root.after(
+                    0,
+                    lambda: self.status_var.set(
+                        "Installer started. MoonJoy will close for update."
+                    ),
+                )
+                self.root.after(1200, self.root.destroy)
+
+            import threading
+            threading.Thread(target=_worker, daemon=True).start()
 
         def _prompt():
             self.status_var.set(f"New version available: {latest_tag} (current: {__version__})")

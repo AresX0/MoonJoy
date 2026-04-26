@@ -118,79 +118,129 @@ def install_windows_msi(msi_path: str) -> None:
 
 
 def install_macos_dmg(dmg_path: str) -> None:
-    """Mount DMG and replace /Applications/MoonJoy.app with admin privileges."""
+    """Mount DMG and replace /Applications/MoonJoy.app with admin privileges.
+
+    The replace step runs in a detached shell script that waits a few
+    seconds so the currently-running MoonJoy.app can quit before its bundle
+    is overwritten. Without this delay, ditto/rm would race against the
+    running process and corrupt the install.
+    """
     if sys.platform != "darwin":
         raise UpdateError("DMG install is only supported on macOS")
 
     mount_dir = tempfile.mkdtemp(prefix="moonjoy_dmg_")
     app_path = os.path.join(mount_dir, "MoonJoy.app")
 
+    attach = subprocess.run(
+        ["hdiutil", "attach", dmg_path, "-nobrowse", "-mountpoint", mount_dir],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    if attach.returncode != 0:
+        raise UpdateError(f"Failed to mount DMG: {attach.stderr.strip()}")
+
+    if not os.path.isdir(app_path):
+        subprocess.run(["hdiutil", "detach", mount_dir, "-force"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        raise UpdateError("Mounted DMG does not contain MoonJoy.app")
+
+    # Stage the new app outside the mount so we can detach the DMG before
+    # the running process exits.
+    staging_dir = tempfile.mkdtemp(prefix="moonjoy_stage_")
+    staged_app = os.path.join(staging_dir, "MoonJoy.app")
+    copy_stage = subprocess.run(
+        ["ditto", app_path, staged_app],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    subprocess.run(["hdiutil", "detach", mount_dir, "-force"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     try:
-        attach = subprocess.run(
-            ["hdiutil", "attach", dmg_path, "-nobrowse", "-mountpoint", mount_dir],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
-        if attach.returncode != 0:
-            raise UpdateError(f"Failed to mount DMG: {attach.stderr.strip()}")
+        os.rmdir(mount_dir)
+    except OSError:
+        pass
+    if copy_stage.returncode != 0:
+        raise UpdateError(f"Failed to stage update: {copy_stage.stderr.strip()}")
 
-        if not os.path.isdir(app_path):
-            raise UpdateError("Mounted DMG does not contain MoonJoy.app")
+    # Build deferred install script that runs after the GUI exits.
+    script_path = os.path.join(staging_dir, "install.sh")
+    with open(script_path, "w", encoding="utf-8") as handle:
+        handle.write(
+            "#!/bin/bash\n"
+            "sleep 3\n"
+            f"STAGED={shlex.quote(staged_app)}\n"
+            "DEST=/Applications/MoonJoy.app\n"
+            "rm -rf \"$DEST\"\n"
+            "ditto \"$STAGED\" \"$DEST\"\n"
+            "rm -rf \"$(dirname \"$STAGED\")\"\n"
+            "open \"$DEST\"\n"
+        )
+    os.chmod(script_path, 0o755)
 
-        copy_cmd = (
-            "rm -rf /Applications/MoonJoy.app && "
-            f"ditto {shlex.quote(app_path)} /Applications/MoonJoy.app"
+    osascript_cmd = f'do shell script {json.dumps("/bin/bash " + shlex.quote(script_path) + " >/tmp/moonjoy-update.log 2>&1 &")} with administrator privileges'
+    auth = subprocess.run(
+        ["osascript", "-e", osascript_cmd],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    if auth.returncode != 0:
+        raise UpdateError(
+            f"Authorization failed: {auth.stderr.strip() or auth.stdout.strip()}"
         )
-        script = f'do shell script {json.dumps(copy_cmd)} with administrator privileges'
-        install = subprocess.run(
-            ["osascript", "-e", script],
-            capture_output=True,
-            text=True,
-            timeout=300,
-            check=False,
-        )
-        if install.returncode != 0:
-            raise UpdateError(f"Install failed: {install.stderr.strip() or install.stdout.strip()}")
-
-        subprocess.Popen(["open", "/Applications/MoonJoy.app"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except OSError as exc:
-        raise UpdateError(f"Failed to install macOS update: {exc}") from exc
-    finally:
-        subprocess.run(
-            ["hdiutil", "detach", mount_dir, "-force"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        try:
-            os.rmdir(mount_dir)
-        except OSError:
-            pass
 
 
 def install_linux_deb(deb_path: str) -> None:
-    """Install .deb update using privilege escalation (pkexec preferred)."""
+    """Install .deb update using a graphical privilege helper.
+
+    Tries pkexec first (works in headless GUI sessions). Falls back to
+    common graphical sudo wrappers; we deliberately avoid plain ``sudo``
+    because it would block on a tty password prompt that the GUI cannot
+    answer.
+    """
     if sys.platform != "linux":
         raise UpdateError("DEB install is only supported on Linux")
 
-    commands = [
+    # All commands here must be non-interactive when called from a GUI.
+    candidates = [
         ["pkexec", "dpkg", "-i", deb_path],
-        ["sudo", "dpkg", "-i", deb_path],
+        ["gksudo", "--", "dpkg", "-i", deb_path],
+        ["kdesudo", "--", "dpkg", "-i", deb_path],
     ]
 
     last_error = ""
-    for cmd in commands:
+    for cmd in candidates:
+        helper = cmd[0]
+        if not _which(helper):
+            continue
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
-        except OSError:
+            result = subprocess.run(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=False,
+            )
+        except OSError as exc:
+            last_error = str(exc)
             continue
         if result.returncode == 0:
             return
-        last_error = result.stderr.strip() or result.stdout.strip()
+        last_error = result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
 
     raise UpdateError(
         "Failed to install .deb update automatically. "
-        f"Last error: {last_error or 'no supported privilege helper (pkexec/sudo) found.'}"
+        f"Install manually with: sudo dpkg -i {deb_path}\n"
+        f"Last error: {last_error or 'no graphical privilege helper (pkexec/gksudo/kdesudo) found.'}"
     )
+
+
+def _which(program: str) -> str | None:
+    from shutil import which
+    return which(program)

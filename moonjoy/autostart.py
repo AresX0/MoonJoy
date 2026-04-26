@@ -101,7 +101,10 @@ def enable_wallpaper_autostart() -> str:
             "Label": "com.platysoft.moonjoy.wallpaper",
             "ProgramArguments": wallpaper_command_args(),
             "RunAtLoad": True,
-            "KeepAlive": True,
+            # Only restart on crash so a clean exit (e.g. another instance
+            # already holds the single-instance lock) does not loop.
+            "KeepAlive": {"SuccessfulExit": False, "Crashed": True},
+            "ThrottleInterval": 30,
             "ProcessType": "Background",
             "StandardOutPath": "/tmp/moonjoy-wallpaper.log",
             "StandardErrorPath": "/tmp/moonjoy-wallpaper.log",

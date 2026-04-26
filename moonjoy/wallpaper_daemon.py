@@ -17,6 +17,31 @@ def _lock_path() -> str:
 def _pid_exists(pid: int) -> bool:
     if pid <= 0:
         return False
+    if sys.platform == "win32":
+        # On Windows, os.kill(pid, 0) calls TerminateProcess and would
+        # actually terminate the target. Use OpenProcess with a query-only
+        # access right to safely test whether the pid is alive.
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION, False, wintypes.DWORD(pid)
+            )
+            if not handle:
+                return False
+            try:
+                exit_code = wintypes.DWORD()
+                if kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                    STILL_ACTIVE = 259
+                    return exit_code.value == STILL_ACTIVE
+                return True
+            finally:
+                kernel32.CloseHandle(handle)
+        except OSError:
+            return False
     try:
         os.kill(pid, 0)
         return True
@@ -58,6 +83,10 @@ def run_wallpaper_daemon(quiet: bool = False) -> int:
     if lock_fd is None:
         if not quiet:
             print("MoonJoy wallpaper rotator is already running.")
+        # Use a successful exit code so launchd/systemd treat this as a
+        # clean no-op rather than a crash-and-retry trigger. macOS launchd
+        # is configured with KeepAlive.SuccessfulExit=False and Linux
+        # systemd uses Restart=on-failure, so exit 0 stops the loop.
         return 0
 
     config = load_config()
