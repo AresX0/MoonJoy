@@ -39,7 +39,8 @@ class SettingsApp:
     def __init__(self, root: tk.Tk, start_minimized: bool = False):
         self.root = root
         self.root.title("MoonJoy — Screensaver & Wallpaper")
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
+        self.root.minsize(420, 400)
         self.config = load_config()
 
         # Dark theme colors
@@ -66,8 +67,56 @@ class SettingsApp:
         style.configure("Dark.TCheckbutton", background=self.bg, foreground=self.fg, font=(_font, 10))
         style.configure("Dark.TCombobox", fieldbackground=self.entry_bg, foreground=self.fg)
 
-        main = ttk.Frame(root, style="Dark.TFrame", padding=20)
-        main.pack(fill="both", expand=True)
+        # Scrollable container ─ canvas + vertical scrollbar holding the
+        # actual content frame (`main`). All existing widgets continue to
+        # be parented to `main` unchanged.
+        outer = ttk.Frame(root, style="Dark.TFrame")
+        outer.pack(fill="both", expand=True)
+
+        canvas = tk.Canvas(outer, bg=self.bg, highlightthickness=0,
+                           borderwidth=0)
+        vscroll = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=vscroll.set)
+        vscroll.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+
+        main = ttk.Frame(canvas, style="Dark.TFrame", padding=20)
+        main_window = canvas.create_window((0, 0), window=main, anchor="nw")
+
+        def _on_main_configure(_event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        main.bind("<Configure>", _on_main_configure)
+
+        def _on_canvas_configure(event):
+            # Keep the inner frame as wide as the visible canvas area.
+            canvas.itemconfigure(main_window, width=event.width)
+        canvas.bind("<Configure>", _on_canvas_configure)
+
+        # Mouse-wheel scrolling (Windows/macOS use <MouseWheel>; X11 uses Button-4/5).
+        def _on_mousewheel(event):
+            if event.num == 4:
+                delta = -1
+            elif event.num == 5:
+                delta = 1
+            else:
+                # event.delta is +/-120 per notch on Windows, smaller on macOS.
+                delta = -1 if event.delta > 0 else 1
+            canvas.yview_scroll(delta, "units")
+
+        def _bind_wheel(_event=None):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            canvas.bind_all("<Button-4>", _on_mousewheel)
+            canvas.bind_all("<Button-5>", _on_mousewheel)
+
+        def _unbind_wheel(_event=None):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        canvas.bind("<Enter>", _bind_wheel)
+        canvas.bind("<Leave>", _unbind_wheel)
+        # Bind immediately so the wheel works without first hovering.
+        _bind_wheel()
 
         # Logo + Title row
         header = ttk.Frame(main, style="Dark.TFrame")
