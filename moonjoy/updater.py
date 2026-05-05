@@ -81,23 +81,38 @@ def download_file(url: str, filename: str) -> str:
 
 
 def install_windows_msi(msi_path: str) -> None:
-    """Launch elevated MSI install. Existing versions are removed via MajorUpgrade."""
+    """Launch MSI install via a detached helper that waits for MoonJoy to exit.
+
+    PyInstaller-onefile boots MoonJoy.exe from Program Files; while running
+    it is locked. Calling msiexec directly with /passive causes Restart
+    Manager to schedule the upgrade for next reboot instead of replacing
+    the file, so the install silently never happens. We work around this
+    by writing a small .cmd helper that waits a few seconds (long enough
+    for the GUI to terminate and Windows to release the lock), then runs
+    msiexec. The MSI is marked perMachine, so msiexec auto-elevates via
+    UAC — no PowerShell ``Verb RunAs`` wrapper is needed.
+    """
     if sys.platform != "win32":
         raise UpdateError("Windows MSI install is only supported on Windows")
 
-    arg_list = f'/i "{msi_path}" /passive /norestart'
-    cmd = [
-        "powershell",
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        (
-            "Start-Process msiexec.exe "
-            f"-ArgumentList '{arg_list}' "
-            "-Verb RunAs"
-        ),
-    ]
+    helper_dir = os.path.join(tempfile.gettempdir(), "moonjoy_updates")
+    os.makedirs(helper_dir, exist_ok=True)
+    log_path = os.path.join(helper_dir, "install.log")
+    helper_path = os.path.join(helper_dir, "install_msi.cmd")
+
+    # /passive keeps a small progress UI; /norestart avoids surprise reboots.
+    # The leading timeout gives the running MoonJoy.exe time to exit so
+    # Restart Manager doesn't defer file replacement to next boot.
+    helper_script = (
+        "@echo off\r\n"
+        "timeout /t 4 /nobreak >nul\r\n"
+        f'msiexec /i "{msi_path}" /passive /norestart /L*v "{log_path}"\r\n'
+    )
+    try:
+        with open(helper_path, "w", encoding="utf-8") as handle:
+            handle.write(helper_script)
+    except OSError as exc:
+        raise UpdateError(f"Failed to write installer helper: {exc}") from exc
 
     creationflags = (
         getattr(subprocess, "DETACHED_PROCESS", 0)
@@ -107,11 +122,12 @@ def install_windows_msi(msi_path: str) -> None:
 
     try:
         subprocess.Popen(
-            cmd,
+            ["cmd.exe", "/c", helper_path],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=creationflags,
+            close_fds=True,
         )
     except OSError as exc:
         raise UpdateError(f"Failed to launch installer: {exc}") from exc

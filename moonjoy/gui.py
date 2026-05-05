@@ -362,10 +362,21 @@ class SettingsApp:
                 self.root.after(
                     0,
                     lambda: self.status_var.set(
-                        "Installer started. MoonJoy will close for update."
+                        "Installer scheduled. MoonJoy will close so the update can run."
                     ),
                 )
-                self.root.after(1200, self.root.destroy)
+                # Quit promptly so the running executable is unlocked before
+                # the deferred installer helper begins. Use a hard exit on
+                # Windows because the PyInstaller bootloader keeps the .exe
+                # locked until the python process actually terminates.
+                def _shutdown():
+                    try:
+                        self.root.destroy()
+                    except Exception:
+                        pass
+                    if sys.platform == "win32":
+                        os._exit(0)
+                self.root.after(800, _shutdown)
 
             import threading
             threading.Thread(target=_worker, daemon=True).start()
